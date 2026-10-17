@@ -3,7 +3,7 @@
 `Icons` contains native texture **FileDataIDs** from the same verified Forever build as the spell enums. Icon identity is independent of spell or item actions.
 
 ```ts
-import { UI } from "wuira";
+import { UI } from "wuira/ui";
 import { Icons } from "wuira/icons";
 import { Icon } from "wuira/ui";
 

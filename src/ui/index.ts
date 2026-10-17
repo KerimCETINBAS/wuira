@@ -29,3 +29,4 @@ export { Label } from "./Label";
 export type { LabelProps } from "./Label";
 export { Icon } from "./Icon";
 export type { IconProps } from "./Icon";
+export { unitPortrait } from "./UnitPortrait";

@@ -1,6 +1,6 @@
 # Nameplates
 
-Import `Nameplates` from `wuira` or `wuira/skins`. Wuira owns native access,
+Import `Nameplates` from `wuira/skins`. Wuira owns native access,
 events, unit bindings and visual cleanup. Preset selection, NPC rules, editor
 data and component collections belong to the consuming addon (for example LumaUI).
 No class or mob presets are built into Wuira.

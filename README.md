@@ -7,7 +7,8 @@ Build WoW Forever interfaces with TypeScript and JSX.
 wuira is a UI framework and addon toolchain for developers who want to describe interfaces in code, compose reusable components, and keep game data separate from presentation. Write TypeScript, arrange native widgets with JSX, and compile your addon to Lua.
 
 ```tsx
-import { UI, wuira } from "wuira";
+import { wuira } from "wuira";
+import { UI } from "wuira/ui";
 
 function ResourceBar({ current }: { current: number }) {
     return <progress width="inherit" height={24} min={0} max={100} current={current} />;
@@ -79,7 +80,8 @@ Supported action types: `spell`, `item`, `macro`, `action`, and `target`. Action
 ## Nameplates
 
 ```tsx
-import { Nameplates, UI } from "wuira";
+import { UI } from "wuira/ui";
+import { Nameplates } from "wuira/skins";
 import { HP } from "wuira/datasources";
 
 const plates = Nameplates
@@ -140,6 +142,8 @@ For global installation, use `npm install -g wuira`. To test unpublished changes
 ## Scope and status
 
 wuira is an early framework. It is not a complete UI replacement, an in-game visual editor, or a WeakAuras replacement. JSX describes widgets; there is no React runtime or automatic reactive rendering layer. Combat restrictions and secret-value rules still apply and cannot be bypassed by the framework.
+
+Import widgets from `wuira/ui` (including `unitPortrait`), native adapters from `wuira/skins`, and `BlizzardUI` / `ActionBars` from `wuira/platform`. The package root is the addon shell.
 
 Current core includes Cells, layouts, progress bars, decorations, unit sources, native nameplate adapters, and project tooling. Not yet implemented: a complete WoW API surface, nameplate click-cast abstractions, and preset management. Nameplate lifecycle tests use a mock Lua runtime; real-client validation is still required.
 

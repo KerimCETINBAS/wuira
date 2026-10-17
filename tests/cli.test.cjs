@@ -34,8 +34,11 @@ test("CLI creates and builds a standalone empty-JSX addon", async () => {
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.equal(result.stderr, "");
     fs.appendFileSync(path.join(project, "src/index.tsx"), `
-import { UI, Encoding, wuira, WuiraApp, Store as RootStore, StoreRegistry as RootStoreRegistry, Icons as RootIcons } from "wuira";
+import { Encoding, wuira, WuiraApp, Store as RootStore, StoreRegistry as RootStoreRegistry } from "wuira";
+import { UI } from "wuira/ui";
 import { Icons } from "wuira/icons";
+import { BlizzardUI, ActionBars } from "wuira/platform";
+import { Nameplates } from "wuira/skins";
 import { SourceConverter, ClassSource } from "wuira/datasources";
 const currentApp: WuiraApp = Wuira.App;
 if (currentApp !== Wuira.App || wuira !== Wuira) throw "Application accessor must remain stable";
@@ -58,7 +61,9 @@ if (false) {
     new SourceConverter(new ClassSource("player"), value => value * 2);
     mapped.Dispose(); transformed.Dispose();
     const nativeTexture: number = Icons.BlessingOfFreedom_135968;
-    const rootTexture: number = RootIcons.BlessingOfFreedom_135968;
+    const platform: typeof ActionBars = ActionBars;
+    const stock: typeof BlizzardUI = BlizzardUI;
+    const plates: typeof Nameplates = Nameplates;
     // @ts-expect-error Icon names are generated from the verified catalog.
     Icons.NotARealForeverIcon;
     class MemorySettings extends RootStore { spellId = PaladinSpells.HolyLight; }

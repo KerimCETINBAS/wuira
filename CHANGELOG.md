@@ -7,6 +7,19 @@ with the release date and highlight breaking changes explicitly.
 
 ## Unreleased
 
+## 0.3.0 — 2026-10-17
+
+### Breaking
+
+- The package root exports only the addon shell: `Wuira`, `wuira`, `WuiraApp`, `AddonSettings`, `Encoding`, `Store`, and `StoreRegistry`.
+- Import widgets, including `UI`, `HoverTracker`, and `unitPortrait`, from `wuira/ui`.
+- Import `BlizzardUI` and `ActionBars` from `wuira/platform`.
+- Import `Nameplates` and `MicroBar` from `wuira/skins`. Spell and icon enums stay on `wuira/spells` and `wuira/icons`.
+
+### Added
+
+- `unitPortrait` mounts a unit portrait and a protected target/menu button without coupling resource widgets to that button.
+
 ## 0.2.8 — 2026-10-17
 
 ### Fixed
