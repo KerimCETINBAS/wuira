@@ -1,5 +1,6 @@
 import "./console-polyfill";
 
+export { FilterAura, Range, ReadAuras } from "./helpers";
 export { Wuira, wuira } from "./wuira";
 export { WuiraApp } from "./WuiraApp";
 export type { CommandCallback } from "./platform/SlashCommands";

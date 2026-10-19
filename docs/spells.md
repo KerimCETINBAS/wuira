@@ -22,7 +22,7 @@ effects and records whose ownership cannot be established from these tables.
 No heuristic turns every unclassified record into an NPC-only spell.
 Class-family membership does not prove that a spell is learnable by a player.
 The snapshot includes retired, test and hidden records still present in this
-Forever client's tables. Use KnownSpells for a character's learned abilities.
+Forever client's tables. Learned spells come from the spell book calls, one row at a time.
 
 Every ID has an explicit ID-suffixed member. Rank labels come from the client.
 Short aliases select the lowest linked rank; ambiguous unranked names require

@@ -141,26 +141,27 @@
     enabled=true; dynamic:Refresh(); assert(subscriptions == 1)
     enabled=false; dynamic:Refresh(); assert(subscriptions == 0 and b.UnitFrame.alpha == 1)
     dynamic:Dispose()
-    -- Real HP source bindings are detached before a pooled carrier moves to another unit.
-    local oldHealth, oldMax = UnitHealth, UnitHealthMax
+    -- A bound duration source is detached before a pooled carrier moves to another unit.
     local readsByUnit, bars = {}, {}
-    UnitHealth=function(unit) readsByUnit[unit]=(readsByUnit[unit] or 0)+1; return 30 end
-    UnitHealthMax=function() return 100 end
+    local TimerSource = __wuiraModules.require("datasources.TimerSource").TimerSource
     local resources=Nameplates.Replace(nil,function() return true end,function(ctx)
-        return factory(nil,"progress",{source=new(HP,ctx.Unit),onMount=function(_,bar) bars[#bars+1]=bar end})
+        local source=new(TimerSource,function()
+            readsByUnit[ctx.Unit]=(readsByUnit[ctx.Unit] or 0)+1
+            return nil
+        end,{"UNIT_HEALTH"},ctx.Unit)
+        return factory(nil,"progress",{source=source,onMount=function(_,bar) bars[#bars+1]=bar end})
     end)
-    assert(bars[1].value == 30)
+    assert(readsByUnit.nameplate3 > 0 and bars[1])
     plates.nameplate3,guids.nameplate3=nil,nil
     add("nameplate4",b,"E")
     assert(#bars == 2 and not bars[1].shown)
     local oldReads=readsByUnit.nameplate3
-    emit("UNIT_HEALTH","nameplate3"); assert(readsByUnit.nameplate3 == oldReads, "old HP source no longer receives events")
-    local freshReads=readsByUnit.nameplate4
+    emit("UNIT_HEALTH","nameplate3"); assert(readsByUnit.nameplate3 == oldReads, "old source no longer receives events")
+    local freshReads=readsByUnit.nameplate4 or 0
     emit("UNIT_HEALTH","nameplate4"); assert(readsByUnit.nameplate4 > freshReads)
     resources:Dispose()
     freshReads=readsByUnit.nameplate4
     emit("UNIT_HEALTH","nameplate4"); assert(readsByUnit.nameplate4 == freshReads)
-    UnitHealth,UnitHealthMax=oldHealth,oldMax
     -- Returning one cached JSX object is rejected on its second simultaneous mount.
     add("nameplate5",a,"F")
     local cached=factory(nil,"cell",{width=10,height=10})

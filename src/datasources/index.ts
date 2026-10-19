@@ -2,34 +2,18 @@ export { DataSource } from "./DataSource";
 export type { ReadResult } from "./DataSource";
 export { SourceConverter } from "./SourceConverter";
 export type { ValueSource } from "./SourceConverter";
-export { EditModeLayouts } from "./EditModeLayouts";
-export type { EditModeLayout, EditModeLayoutSnapshot, EditModeLayoutsStatus } from "./EditModeLayouts";
 export { ProgressSource } from "./ProgressSource";
-export { HP, Mana, Unit, DataSources, Absorb, Prediction } from "./Resources";
 export { Source } from "./Source";
 export { UseSource } from "./UseSource";
-export { Aura, AuraSource, Buffs, Debuffs } from "./Auras";
-export type { AuraSourceStatus } from "./Auras";
-export { GroupMembers, PartyMembers, RaidMembers } from "./GroupMembers";
-export type { GroupScope } from "./GroupMembers";
-export { GroupRoster, getPetUnitToken } from "./GroupRoster";
-export type { GroupRosterMember } from "./GroupRoster";
-export { ClassSource, SpecSource, Specializations } from "./UnitInfo";
-export type { ClassInfo, SpecializationInfo, InspectStatus } from "./UnitInfo";
-export { UnitSource, resolveUnit } from "./UnitSource";
-export type { UnitInput, UnitIdentity } from "./UnitSource";
-export { SwingTimer, SwingHand } from "./SwingTimer";
 export { TimerSource } from "./TimerSource";
-export { TotemTimer } from "./TotemTimer";
-export type { TotemTimerStatus } from "./TotemTimer";
 export type { NativeDuration } from "./TimerSource";
 export { TextureSource } from "./TextureSource";
-export { CastTimer } from "./CastTimer";
-export { AuraTimer } from "./AuraTimer";
-export type { AuraTimerOptions, AuraTimerStatus } from "./AuraTimer";
-export { SpellCooldown, GlobalCooldown } from "./SpellCooldown";
-export { SpellSource } from "./SpellSource";
-export { KnownSpells } from "./KnownSpells";
-export type { KnownSpellsStatus, KnownSpell } from "./KnownSpells";
-export { ManaRegenTimer } from "./ManaRegenTimer";
-export type { ManaRegenPhase } from "./ManaRegenTimer";
+export { NativeNumberSource } from "./NativeNumberSource";
+export {
+    GetAuraDataByIndex, GetAuraDataBySpellName, GetAuraDuration, GetLayouts, GetNumGroupMembers, GetNumSpellBookSkillLines,
+    GetNumSpecializationsForClassID, GetNumSpellTabs, GetNumTotemSlots, GetRaidRosterInfo, GetSpecializationInfo, GetSpellBookItemInfo,
+    GetSpellBookSkillLineInfo, GetSpellCooldownDuration, GetSpellName, GetSpellPowerCost, GetSpellTabInfo, GetSpellTexture, GetTotemDuration, GetTotemInfo, IsInRaid, IsSpellPassive, UnitCastingDuration, UnitCastingInfo, UnitChannelDuration, UnitChannelInfo, UnitClass,
+    UnitExists, UnitFullName, UnitGUID, UnitGetIncomingHeals, UnitGetTotalAbsorbs, UnitHealth, UnitHealthMax, UnitHealthPercent,
+    UnitIsPlayer, UnitIsUnit, UnitPower, UnitPowerMax, UnitPowerPercent,
+} from "./NativeApi";
+export type { AuraData, CastInfo, ChannelInfo, EditModeLayoutList, EditModeLayoutRow, NativeDurationHandle, RaidRosterInfo, SpecializationRow, SpellBookSkillLine, SpellCooldownDuration, SpellPowerCost, SpellTabInfo, TotemInfo, UnitClassInfo, UnitName } from "./NativeApi";

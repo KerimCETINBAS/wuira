@@ -206,19 +206,17 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
         table.remove(nativeFrames)
         CreateFrame = nativeCreate
       end
-      local resources = __wuiraModules.require("datasources.Resources")
       local bgClass = __wuiraModules.require("ui.decorations.Background").Background
       local borderClass = __wuiraModules.require("ui.decorations.Border").Border
       local demo = factory(nil,"cell",{width=160,height=80,padding=10,decorations={
         background=construct(bgClass,{texture="tooltip",color={r=1,g=1,b=1}}),
         border=construct(borderClass,{texture="tooltip",thickness=16,color={r=1,g=1,b=1}})
       }},factory(nil,"flow",{direction="vertical",gap=4},{
-        factory(nil,"progress",{source=construct(resources.HP,"player"),height=24,margin=2,color={r=0.1,g=0.75,b=0.4}}),
-        factory(nil,"progress",{source=construct(resources.Mana,"player"),height=24,margin=2,color={r=0.15,g=0.4,b=1}})
+        factory(nil,"progress",{height=24,margin=2,min=0,max=1000,current=650,color={r=0.1,g=0.75,b=0.4}}),
+        factory(nil,"progress",{height=24,margin=2,min=0,max=200,current=120,color={r=0.15,g=0.4,b=1}})
       }))
       __wuiraModules.require("wuira").wuira.Mount(nil,demo,"CENTER")
-      assert(#frames == 7)
-      local healthEvents,manaEvents=frames[6],frames[7]
+      assert(#frames == 5)
       local box = frames[1]
       assert(box.parent == UIParent and box.width == 160 and box.height == 80)
       assert(box.x == 0 and box.y == 0 and box.shown and box.anchor == "CENTER" and box.relativeAnchor == "CENTER")
@@ -241,17 +239,6 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
       assert(frames[5].backdrop.edgeFile == "Interface\\\\Tooltips\\\\UI-Tooltip-Border")
       assert(frames[5].backdrop.edgeSize == 16 and frames[5].shown)
       assert(frames[5].mouseEnabled == false)
-      health,maxHealth = 300,1200
-      emit("UNIT_HEALTH","target")
-      assert(demoBar.value == 650)
-      emit("UNIT_HEALTH","player")
-      assert(demoBar.value == 300 and demoBar.max == 1200)
-      mana,maxMana = 70,250
-      emit("UNIT_MAXPOWER","player")
-      assert(manaBar.value == 70 and manaBar.max == 250 and demoBar.value == 300)
-      health = {secret=true}
-      emit("UNIT_HEALTH","player")
-      assert(demoBar.value == health) -- Opaque data goes straight to native display, never through compute.
       frames = {box} -- Keep subsequent geometry assertions independent of the demo decoration.
       local Renderer = __wuiraModules.require("wuira").Wuira
       local function mount(_, element, parent) return Renderer.Mount(nil, element, nil, parent) end
@@ -281,21 +268,19 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
         instance:____constructor(...)
         return instance
       end
-      local HP = __wuiraModules.require("datasources.Resources").HP
-      local hpSource = new(HP,"player")
+      local native = __wuiraModules.require("datasources.NativeApi")
+      function UnitHealth(unit) assert(unit == "player"); return health end
+      function UnitHealthMax(unit) assert(unit == "player"); return maxHealth end
+      health = {secret=true}
+      local hpSource = new(native.UnitHealth,"player")
       assert(hpSource:IsSecret())
       assert(not pcall(function() return hpSource.Value end))
       health = 500
-      assert(not hpSource:IsSecret() and hpSource.Value == 500 and hpSource.Max.Value == 1200)
-      assert(hpSource.Min.Value == 0 and hpSource.Percent.Value == 65)
-      local overridden = CreateFrame("StatusBar",nil,UIParent)
-      hpSource:BindTo(overridden,{min=10,max=100,current=25})
-      emit("UNIT_HEALTH","player")
-      assert(overridden.min == 10 and overridden.max == 100 and overridden.value == 25)
-      assert(healthEvents.events.UNIT_HEALTH and manaEvents.events.UNIT_POWER_UPDATE)
+      maxHealth = 1200
+      assert(not hpSource:IsSecret() and hpSource.Value == 500)
+      assert(new(native.UnitHealthMax,"player").Value == 1200)
       Renderer.Unmount(nil,box)
-      assert(next(demoBar.events) == nil and demoBar.onEvent == nil and not demoBar.shown)
-      assert(next(manaBar.events) == nil and manaBar.onEvent == nil and not box.shown)
+      assert(not demoBar.shown and not box.shown)
       local Background = __wuiraModules.require("ui.decorations.Background").Background
       local Border = __wuiraModules.require("ui.decorations.Border").Border
       local Glow = __wuiraModules.require("ui.decorations.Glow").Glow
@@ -501,137 +486,25 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
         C_EncodingUtil=nil
       end
       print("wuira_CELL_OK")
-      local auraAPI = __wuiraModules.require("datasources.Auras")
-      local helpful = {
-        {spellId=1,name="Wisdom",icon=10,sourceUnit="party1"},
-        {spellId=2,name="Might",icon=20,sourceUnit="player"},
-        {spellId=3,name="Unknown",icon=30},
-        {spellId=4,name="Restricted caster",icon=40,sourceUnit={secret=true}},
-      }
-      local harmful = {{spellId=5,name="Poison",icon=50,sourceUnit="target"}}
-      function UnitIsUnit(first,second) return first == second or first == "raid2" end
-      C_UnitAuras = {GetAuraDataByIndex=function(unit,index,filter)
-        assert(unit == "target")
-        if filter == "HELPFUL" then return helpful[index] end
-        assert(filter == "HARMFUL")
-        return harmful[index]
-      end}
-      local buffs = new(auraAPI.Buffs,"target")
-      local debuffs = new(auraAPI.Debuffs,"target")
-      local list = buffs.Value
-      assert(#list == 4 and list[1].sourceUnit == "party1" and list[1]:isSourceSelf() == false)
-      assert(list[2]:isSourceSelf() == true)
-      assert(list[3].sourceStatus == "unknown" and list[3]:isSourceSelf() == nil)
-      assert(list[4].sourceStatus == "restricted" and list[4].sourceUnit == nil and list[4]:isSourceSelf() == nil)
-      assert(debuffs.Value[1].spellId == 5)
-      helpful[2].sourceUnit = "raid2"
-      assert(buffs.Value[2]:isSourceSelf() == true)
-      helpful[1].spellId = {secret=true}
-      assert(buffs:IsSecret() and not pcall(function() return buffs.Value end))
-      helpful = {}
-      assert(not buffs:IsSecret() and #buffs.Value == 0)
-      C_UnitAuras = nil
-      assert(not pcall(function() return buffs.Value end))
-      local rosterAPI = __wuiraModules.require("datasources.GroupMembers")
-      local raid, count = false, 0
-      function IsInRaid() return raid end
-      function GetNumGroupMembers() return count end
-      local group = new(rosterAPI.GroupMembers)
-      local party = new(rosterAPI.PartyMembers)
-      local raidMembers = new(rosterAPI.RaidMembers)
-      assert(#group.Value == 1 and group.Value[1] == "player")
-      assert(#party.Value == 0 and #raidMembers.Value == 0)
-      count = 3
-      assert(table.concat(party.Value, ",") == "player,party1,party2")
-      assert(table.concat(group.Value, ",") == "player,party1,party2")
-      raid, count = true, 10
-      assert(#party.Value == 0 and #raidMembers.Value == 10)
-      assert(group.Value[1] == "raid1" and group.Value[10] == "raid10")
-      count = {secret=true}
-      assert(group:IsSecret() and not pcall(function() return group.Value end))
-      count, raid = 0, false
-      assert(not group:IsSecret() and #group.Value == 1)
-      GetNumGroupMembers = nil
-      assert(not pcall(function() return group.Value end))
-      local unitAPI = __wuiraModules.require("datasources.UnitInfo")
-      local targetGUID, combat, allowed = "A", false, true
-      local isPlayer = true
-      function UnitIsPlayer(unit) return isPlayer end
-      function UnitClass(unit) return "Paladin", "PALADIN", 2 end
-      function UnitGUID(unit) return unit == "player" and "SELF" or targetGUID end
-      function UnitIsUnit(first,second) return first == second end
+      local combat = false
       function InCombatLockdown() return combat end
-      function CanInspect(unit) return allowed end
-      local requests = 0
-      function NotifyInspect(unit) requests=requests+1 end
-      C_SpecializationInfo = {
-        GetNumSpecializationsForClassID=function(id) assert(id == 2); return 3 end,
-        GetSpecializationInfo=function(index,inspect,pet,unit,sex,group,classID)
-          assert(classID == 2 and not pet)
-          if inspect then assert(unit == "target") end
-          return index, "Tree"..index, "", 100+index, "DAMAGER", 1, index*5
-        end,
-      }
-      local unitSourceAPI = __wuiraModules.require("datasources.UnitSource")
-      local target = new(unitSourceAPI.UnitSource,"target")
-      assert(target.Is.PC == true and target.Is.Self == false and target.Value.guid == "A")
-      local class = new(unitAPI.ClassSource,target)
-      assert(class.Value.token == "PALADIN" and class.Value.id == 2)
-      do
-      local classChanges=0
-      local stopClass=class:onChange(function(_,value) assert(value.token=="PALADIN");classChanges=classChanges+1 end)
-      local classListener
-      for _,frame in ipairs(frames) do if frame.events.GROUP_ROSTER_UPDATE and frame.events.UNIT_NAME_UPDATE then classListener=frame end end
-      classListener.onEvent(classListener,"UNIT_NAME_UPDATE","other");assert(classChanges==0)
-      classListener.onEvent(classListener,"GROUP_ROSTER_UPDATE");assert(classChanges==1)
-      target:Retarget("party1");assert(classChanges==2);target:Retarget("target");assert(classChanges==3)
-      stopClass();assert(classListener.onEvent==nil and next(classListener.events)==nil)
-      end
-      do
-      local dynamic=new(unitSourceAPI.UnitSource,"target")
-      local fixed=new(unitSourceAPI.UnitSource,"player")
-      local changes,fixedChanges,tokenChanges=0,0,0
-      local stop=dynamic:onChange(function() changes=changes+1 end)
-      local stopFixed=fixed:onChange(function() fixedChanges=fixedChanges+1 end)
-      local stopToken=dynamic:onTokenChange(function() tokenChanges=tokenChanges+1 end)
-      emit("PLAYER_TARGET_CHANGED");assert(changes==1 and fixedChanges==0 and tokenChanges==0)
-      combat=true;emit("PLAYER_TARGET_CHANGED");assert(changes==2 and tokenChanges==0,'combat identity updates must not mutate secure unit bindings');combat=false
-      dynamic:Retarget("party1");assert(changes==3 and tokenChanges==1)
-      emit("PLAYER_TARGET_CHANGED");assert(changes==3 and fixedChanges==0,'retargeted non-target sources stop observing target changes')
-      dynamic:Retarget("target");assert(changes==4 and tokenChanges==2)
-      stop();stopFixed();stopToken();emit("PLAYER_TARGET_CHANGED");assert(changes==4)
-      end
-      local own = new(unitAPI.Specializations,"player")
-      assert(#own.Value == 3 and own.Value[3].pointsSpent == 15)
-      local specs = new(unitAPI.SpecSource,target)
-      assert(class.target == target and specs.target == target)
-      assert(new(auraAPI.Buffs,target).target == target)
-      assert(new(resources.HP,target).target == target)
-      assert(specs.Value == nil and requests == 0)
-      assert(specs:RequestInspect() and specs.Status == "pending" and requests == 1)
-      local listener = frames[#frames]
-      listener.onEvent(listener,"INSPECT_READY","OTHER")
-      assert(specs.Value == nil)
-      listener.onEvent(listener,"INSPECT_READY","A")
-      assert(specs.Status == "ready" and #specs.Value == 3 and listener.onEvent == nil)
-      targetGUID = "B"
-      assert(target.Value.guid == "B")
-      assert(specs.Value == nil and specs.Status == "idle")
-      combat = true
-      assert(not specs:RequestInspect() and requests == 1)
-      combat = false
-      assert(specs:RequestInspect())
-      listener = frames[#frames]
-      targetGUID = "C"
-      listener.onEvent(listener,"INSPECT_READY","B")
-      assert(specs.Value == nil and listener.onEvent == nil)
-      isPlayer = false
-      local previousRequests = requests
-      assert(class.Value == nil and specs.Value == nil and not specs:RequestInspect())
-      assert(requests == previousRequests)
-      isPlayer = {secret=true}
-      assert(target.Is.PC == nil)
-      assert(class:IsSecret() and specs:IsSecret() and not specs:RequestInspect())
+      local native = __wuiraModules.require("datasources.NativeApi")
+      C_UnitAuras = { GetAuraDataByIndex = function(unit, index, filter)
+        assert(unit == "target" and filter == "HELPFUL")
+        if index == 1 then return { spellId = 1, name = "Wisdom", icon = 10 } end
+        return nil
+      end }
+      local aura = new(native.GetAuraDataByIndex, "target", 1, "HELPFUL")
+      assert(aura.Value.name == "Wisdom" and aura.Value.spellId == 1)
+      assert(new(native.GetAuraDataByIndex, "target", 2, "HELPFUL").Value == nil)
+      function GetNumGroupMembers() return 5 end
+      function IsInRaid() return false end
+      assert(new(native.GetNumGroupMembers).Value == 5 and new(native.IsInRaid).Value == false)
+      function UnitClass() return "Paladin", "PALADIN", 2 end
+      local classInfo = new(native.UnitClass, "player").Value
+      assert(classInfo.classFile == "PALADIN" and classInfo.classId == 2)
+      C_Spell = { GetSpellName = function(id) assert(id == 20271); return "Judgement" end }
+      assert(new(native.GetSpellName, 20271).Value == "Judgement")
       local storeAPI = __wuiraModules.require("store.index")
       local Memory = {prototype={}}
       Memory.prototype.__index=Memory.prototype
@@ -707,40 +580,10 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
       loadingRegistry:set(Persisted,function(_,state) state.Width=322;return state end)
       assert(LumaTestDB["luma.settings"].Width==322 and next(earlyTable)==nil,'writes follow the actual SavedVariables table')
       loadingRegistry:Dispose()
-      local swingAPI = __wuiraModules.require("datasources.SwingTimer")
-      local now = 10
-      function GetTime() return now end
-      C_SwingTimer = {}
-      Enum = {PlayerSwingType={MainHand=0,OffHand=1,Ranged=2},StatusBarInterpolation={Immediate=0},StatusBarTimerDirection={RemainingTime=1}}
+      Enum = {StatusBarInterpolation={Immediate=0},StatusBarTimerDirection={RemainingTime=1}}
       C_DurationUtil={CreateDuration=function()
         return {SetTimeFromStart=function(self,start,duration) self.start,self.duration=start,duration end}
       end}
-      local swing = new(swingAPI.SwingTimer,"MainHand")
-      local swingEvents = frames[#frames]
-      assert(not swing.HasTiming and swing.Value == 0)
-      swingEvents.onEvent(swingEvents,"PLAYER_SWING",3,1)
-      assert(not swing.HasTiming)
-      swingEvents.onEvent(swingEvents,"PLAYER_SWING",3,0)
-      assert(swing.HasTiming and swing.Value == 3 and swing.Max.Value == 3)
-      now=11.5
-      assert(swing.Value == 1.5 and swing.Percent.Value == 50)
-      local swingView = factory(nil,"progress",{width=100,height=12,source=swing})
-      local swingFrame = API.Mount(nil,swingView)
-      assert(swingFrame.timer.start == 10 and swingFrame.timer.duration == 3)
-      local calls = swingFrame.timerCalls
-      API.Unmount(nil,swingFrame)
-      swingEvents.onEvent(swingEvents,"PLAYER_SWING",2,0)
-      assert(swingFrame.timerCalls == calls and swing.Value == 2)
-      swingEvents.onEvent(swingEvents,"PLAYER_SWING",{secret=true},0)
-      assert(swing:IsSecret() and not pcall(function() return swing.Value end))
-      swingEvents.onEvent(swingEvents,"PLAYER_SWING",2,0)
-      assert(not swing:IsSecret())
-      now=20
-      assert(swing.Value == 0)
-      swingEvents.onEvent(swingEvents,"WEAPON_SLOT_CHANGED")
-      assert(not swing.HasTiming and swing.Max.Value == 0)
-      swing:Dispose()
-      assert(swingEvents.onEvent == nil and next(swingEvents.events) == nil)
       local labelView = factory(nil,"label",{width=100,height=20,text="Health",fontSize=11})
       local labelFrame = API.Mount(nil,labelView)
       assert(labelFrame.fontString.text == "Health" and labelFrame.fontString.size == 11)
@@ -784,149 +627,8 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
       assert(activeFrame.shown and activeFrame.fontString.text == "Flash of Light")
       API.Unmount(nil,activeFrame)
       assert(driver.onUpdate == nil and not driver.shown)
-      do
-      local function verifyTotemTimer()
-        local timerClass=__wuiraModules.require("datasources.TotemTimer").TotemTimer
-        local oldSpell=C_Spell
-        C_Spell={GetSpellName=function(id) assert(id == 26573); return "Consecration" end}
-        local effects={}
-        local remaining=8
-        local duration={GetRemainingDuration=function() return remaining end}
-        function GetNumTotemSlots() return 4 end
-        function GetTotemInfo(slot)
-          local effect=effects[slot]
-          if not effect then return false,"",0,0,0,1,0 end
-          -- Secret numerical timings must never be compared or reconstructed.
-          return true,effect.name,{secret=true},{secret=true},123,1,effect.id
-        end
-        function GetTotemDuration(slot) assert(slot == 2); return duration end
-        local source=new(timerClass,26573)
-        assert(source.Status == "inactive" and not source.IsActive)
-        effects[1]={name="Unrelated ground effect",id=999}
-        local view=factory(nil,"progress",{width=220,height=2,source=source,
-          background=false,backdrop=false,visible=function() return source.IsActive end})
-        local bar=API.Mount(nil,view)
-        local visibility=frames[#frames]
-        assert(not bar.shown)
-        effects[2]={name="Consecration",id=20116} -- Different rank, discovered outside slot 1.
-        emit("PLAYER_TOTEM_UPDATE",2)
-        visibility.onUpdate(visibility,.05)
-        assert(bar.timer == duration and bar.shown and source.Status == "active")
-        remaining=0
-        visibility.onUpdate(visibility,.05)
-        assert(not bar.shown) -- Native timer expiration requires no totem removal event.
-        remaining=8
-        effects[2]={name="Consecration",id={secret=true}}
-        emit("PLAYER_TOTEM_UPDATE",2)
-        visibility.onUpdate(visibility,.05)
-        assert(bar.shown and bar.timer == duration) -- Public identity permits opaque timing.
-        effects[2]={name={secret=true},id={secret=true}}
-        emit("PLAYER_TOTEM_UPDATE",2)
-        visibility.onUpdate(visibility,.05)
-        assert(not bar.shown and source.Status == "restricted")
-        effects[2]=nil
-        emit("PLAYER_TOTEM_UPDATE",2)
-        assert(source.Status == "inactive")
-        API.Unmount(nil,bar)
-        assert(next(bar.events) == nil and bar.onEvent == nil)
-        GetTotemDuration=nil
-        assert(source.Status == "unavailable")
-        GetTotemInfo=nil; GetNumTotemSlots=nil; C_Spell=oldSpell
-      end
-      verifyTotemTimer()
-      end
       local stock = __wuiraModules.require("platform.BlizzardUI").BlizzardUI
-      do
-      local function verifyKnownSpells()
-        local oldBook,oldSpell,oldEnum=C_SpellBook,C_Spell,Enum
-        Enum={SpellBookSpellBank={Player=0},SpellBookItemType={Spell=1}}
-        local reads=0
-        local items={
-          {spellID=20287,name="Seal of Righteousness",itemType=1,isPassive=false},
-          {spellID=20287,name="Seal of Righteousness",itemType=1,isPassive=false}, -- Duplicate entry.
-          {spellID=21082,name="Seal of the Crusader",itemType=2}, -- Future spell.
-          {spellID=20375,name="Seal of Command",itemType=1,isOffSpec=true},
-          {spellID=20216,name="Divine Favor",itemType=1,isPassive=true},
-        }
-        C_SpellBook={
-          GetNumSpellBookSkillLines=function() reads=reads+1; return 1 end,
-          GetSpellBookSkillLineInfo=function(line) assert(line == 1); return {itemIndexOffset=0,numSpellBookItems=#items} end,
-          GetSpellBookItemInfo=function(slot,bank) assert(bank == 0); return items[slot] end,
-        }
-        C_Spell={GetSpellName=function(id)
-          if id == 21084 then return "Seal of Righteousness" end
-          return "Other spell"
-        end}
-        local class=__wuiraModules.require("datasources.KnownSpells").KnownSpells
-        local source=new(class)
-        local frame=frames[#frames]
-        assert(frame.onUpdate == nil and source.Status == "ready")
-        assert(#source.Value == 2 and source:Has(21084) and source:Has(20287))
-        assert(not source:Has(21082) and not source:Has(20375))
-        assert(#source.Entries == 2 and source:Find(21084).id == 20287)
-        assert(source:Find("Divine Favor").isPassive == true and source:Find(20287).isPassive == false)
-        assert(#source:Filter('sEAL*')==1 and source:Filter('sEAL*')[1].id==20287)
-        assert(#source:Filter('*Favor')==1 and #source:Filter('Seal of Righteousnes?')==1 and #source:Filter('Seal')==0)
-        assert(#source:Filter('*')==2 and not pcall(source.Filter,source,{secret=true}))
-        local metadata=source.Entries
-        metadata[1].name="Modified"
-        assert(source:Find("Divine Favor").name == "Divine Favor")
-        local count=reads
-        local filtered=source:Filter('Seal*'); filtered[1].name='Changed'
-        assert(source:Filter('Seal*')[1].name=='Seal of Righteousness' and reads==count,'filters copy the cache without native reads')
-        local snapshot=source.Value
-        snapshot[1]=0
-        assert(source.Value[1] ~= 0 and reads == count) -- Read copies cached data, never the book.
-        local changes=0
-        local stop=source:onChange(function(_,value) changes=changes+1; assert(#value > 0) end)
-        assert(changes == 0)
-        emit("SPELLS_CHANGED")
-        assert(changes == 0 and reads == count+1)
-        items[3].itemType=1
-        emit("LEARNED_SPELL_IN_SKILL_LINE",21082,1,false)
-        assert(changes == 1 and source:Has(21082))
-        items[4].isOffSpec=false
-        emit("PLAYER_TALENT_UPDATE")
-        assert(changes == 2 and source:Has(20375))
-        emit("PLAYER_LEVEL_UP",40)
-        assert(changes == 2)
-        items[5].isPassive=false
-        emit("SPELLS_CHANGED")
-        assert(changes == 3 and source:Find(20216).isPassive == false)
-        items[1].spellID={secret=true}
-        emit("SPELLS_CHANGED")
-        assert(source.Status == "restricted" and #source.Entries == 0 and source:Find(21084) == nil and not pcall(function() return source.Value end))
-        items[1].spellID=20287
-        emit("PLAYER_ENTERING_WORLD")
-        assert(source.Status == "ready" and changes == 4)
-        stop()
-        items[3].itemType=2
-        emit("SPELLS_CHANGED")
-        assert(changes == 4)
-        items[5].name='Spell [x].+%-(A)^$'
-        emit('SPELLS_CHANGED')
-        assert(#source:Filter('Spell [x].+%-(A)^$')==1,'glob escapes Lua pattern metacharacters')
-        source:Dispose()
-        assert(next(frame.events) == nil and frame.onEvent == nil)
-        C_SpellBook=nil
-        function IsPassiveSpell(slot,bank) assert(slot == 1 and bank == "spell"); return false end
-        function GetNumSpellTabs() return 1 end
-        function GetSpellTabInfo() return "Holy",123,0,2 end
-        function GetSpellBookItemInfo(slot,bank)
-          assert(bank == "spell")
-          if slot == 1 then return "SPELL",633 end
-          return "FUTURESPELL",879
-        end
-        local legacy=new(class)
-        assert(#legacy.Value == 1 and legacy.Value[1] == 633)
-        assert(legacy.Entries[1].isPassive == false)
-        legacy:Dispose()
-        GetNumSpellTabs=nil; GetSpellTabInfo=nil; GetSpellBookItemInfo=nil; IsPassiveSpell=nil
-        C_SpellBook,C_Spell,Enum=oldBook,oldSpell,oldEnum
-      end
-      verifyKnownSpells()
       ${fs.readFileSync(path.join(__dirname, "editmode-layouts.lua"), "utf8")}
-      end
       PlayerFrame=CreateFrame("Frame",nil,UIParent)
       TargetFrame=CreateFrame("Frame",nil,UIParent)
       FocusFrame=CreateFrame("Frame",nil,UIParent)
@@ -959,93 +661,6 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
       assert(PlayerFrame.parent == UIParent and TargetFrame.parent == UIParent and FocusFrame.parent == UIParent)
       assert(MainMenuBar.parent == UIParent and MultiBarBottomLeft.parent == UIParent)
       assert(next(stockListener.events) == nil and stockListener.onEvent == nil)
-      -- Optional channels do not allocate or read until requested and consumed.
-      local healReads,absorbReads,conditionCalls=0,0,0
-      local incoming,shield=300,200
-      function UnitGetIncomingHeals(unit) assert(unit == "player"); healReads=healReads+1; return incoming end
-      function UnitGetTotalAbsorbs(unit) assert(unit == "player"); absorbReads=absorbReads+1; return shield end
-      health=50
-      local plainHP=new(HP)
-      local plainFrame=API.Mount(nil,factory(nil,"progress",{width=100,height=10,source=plainHP}))
-      assert(plainHP.Prediction == nil and plainHP.Absorb == nil)
-      assert(not plainFrame.events.UNIT_HEAL_PREDICTION and not plainFrame.events.UNIT_ABSORB_AMOUNT_CHANGED)
-      assert(healReads == 0 and absorbReads == 0)
-      API.Unmount(nil,plainFrame)
-      local predictedHP=new(HP):UsePrediction():UseAbsorb()
-      local firstHealChannel=predictedHP.Prediction
-      predictedHP:UsePrediction():UseAbsorb()
-      assert(firstHealChannel == predictedHP.Prediction and predictedHP.HealPrediction == predictedHP.Prediction and predictedHP.AbsorbPrediction == predictedHP.Absorb and healReads == 0 and absorbReads == 0)
-      predictedHP:When(function(_,value) conditionCalls=conditionCalls+1; return value >= 20 end)
-      predictedHP:When(function(_,value) return value < 100 end)
-      health=10
-      local before=#frames
-      local predictedFrame=API.Mount(nil,factory(nil,"progress",{width=100,height=10,source=predictedHP,
-        healPrediction={texture="heal-path"},absorbPrediction={texture="shield-path"}}))
-      local healFrame,shieldFrame=frames[before+2],frames[before+3]
-      assert(#frames == before+4 and not predictedFrame.shown and predictedFrame.value == nil)
-      assert(healReads == 0 and absorbReads == 0 and predictedFrame.onUpdate == nil)
-      local predictedListener=frames[before+4]
-      assert(predictedListener.events.UNIT_HEAL_PREDICTION and predictedListener.events.UNIT_ABSORB_AMOUNT_CHANGED)
-      health=40
-      emit("UNIT_HEALTH","target")
-      assert(not predictedFrame.shown and healReads == 0)
-      emit("UNIT_HEALTH","player")
-      assert(predictedFrame.shown and predictedFrame.value == 40 and predictedFrame.clipsChildren)
-      assert(healFrame.value == 300 and shieldFrame.value == 200 and healFrame.max == maxHealth)
-      assert(healFrame.fillTexture == "heal-path" and shieldFrame.fillTexture == "shield-path")
-      assert(healFrame.relative == predictedFrame.fill and healFrame.relativeAnchor == "TOPRIGHT")
-      assert(shieldFrame.parent == predictedFrame and shieldFrame.reverse)
-      incoming,shield={secret=true},{secret=true}
-      emit("UNIT_HEAL_PREDICTION","player")
-      assert(healFrame.value == incoming and shieldFrame.value == shield)
-      assert(not pcall(function() return predictedHP.Prediction.Value end))
-      local priorConditions,priorHealReads=conditionCalls,healReads
-      health={secret=true}
-      emit("UNIT_HEALTH","player")
-      assert(not predictedFrame.shown and conditionCalls == priorConditions and healReads == priorHealReads)
-      health=110
-      emit("UNIT_HEALTH","player")
-      assert(not predictedFrame.shown and healReads == priorHealReads) -- chained conditions are AND
-      health,incoming,shield=25,0,0
-      emit("UNIT_HEALTH","player")
-      assert(predictedFrame.shown and healFrame.value == 0 and shieldFrame.value == 0)
-      assert(predictedHP.Value == 25 and predictedHP.Prediction.Value == 0)
-      API.Unmount(nil,predictedFrame)
-      assert(predictedFrame.onEvent == nil and next(predictedFrame.events) == nil and not healFrame.shown)
-      local hiddenHP=new(HP):When(function() return true end)
-      local hiddenFrame=API.Mount(nil,factory(nil,"progress",{width=100,height=10,source=hiddenHP,visible=function() return false end}))
-      emit("UNIT_HEALTH","player")
-      assert(not hiddenFrame.shown) -- source activation must not override a cell predicate
-      API.Unmount(nil,hiddenFrame)
-      local onlyHeal=new(HP):UsePrediction()
-      local onlyHealFrame=API.Mount(nil,factory(nil,"progress",{width=100,height=10,source=onlyHeal,healPrediction=false}))
-      assert(onlyHeal.Absorb == nil and not onlyHealFrame.events.UNIT_ABSORB_AMOUNT_CHANGED)
-      assert(onlyHealFrame.shown)
-      API.Unmount(nil,onlyHealFrame)
-      for _,vertical in ipairs({false,true}) do
-        for _,reverse in ipairs({false,true}) do
-          local count=#frames
-          local orientedFrame=API.Mount(nil,factory(nil,"progress",{width=100,height=10,
-            source=new(HP):UsePrediction():UseAbsorb(),
-            orientation=vertical and "vertical" or "horizontal",reverse=reverse}))
-          local h,a=frames[count+2],frames[count+3]
-          local point=vertical and (reverse and "TOPLEFT" or "BOTTOMLEFT") or (reverse and "TOPRIGHT" or "TOPLEFT")
-          local relative=vertical and (reverse and "BOTTOMLEFT" or "TOPLEFT") or (reverse and "TOPLEFT" or "TOPRIGHT")
-          assert(h.anchor == point and h.relativeAnchor == relative and h.reverse == reverse and a.reverse ~= reverse)
-          assert(h.orientation == orientedFrame.orientation and a.orientation == orientedFrame.orientation)
-          API.Unmount(nil,orientedFrame)
-        end
-      end
-      local unsupportedHeals,unsupportedAbsorbs=UnitGetIncomingHeals,UnitGetTotalAbsorbs
-      UnitGetIncomingHeals,UnitGetTotalAbsorbs=nil,nil
-      local unsupportedHP=new(HP):UsePrediction():UseAbsorb()
-      assert(not unsupportedHP.Prediction.IsAvailable and not unsupportedHP.Absorb.IsAvailable)
-      local unsupportedCount=#frames
-      local unsupportedFrame=API.Mount(nil,factory(nil,"progress",{width=100,height=10,source=unsupportedHP}))
-      assert(#frames == unsupportedCount+2 and unsupportedFrame.shown)
-      assert(not unsupportedFrame.events.UNIT_HEAL_PREDICTION and not unsupportedFrame.events.UNIT_ABSORB_AMOUNT_CHANGED)
-      API.Unmount(nil,unsupportedFrame)
-      UnitGetIncomingHeals,UnitGetTotalAbsorbs=unsupportedHeals,unsupportedAbsorbs
       local restrictedCalls=0
       local filteredTimer=new(timerAPI.TimerSource,function() return nativeDuration end,{"SPELL_UPDATE_COOLDOWN"})
       filteredTimer:When(function(_,value) restrictedCalls=restrictedCalls+1; return value ~= nil end)
@@ -1060,103 +675,6 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
       conditionalTimer.onEvent(conditionalTimer,"SPELL_UPDATE_COOLDOWN")
       assert(not conditionalTimer.shown and restrictedCalls == restrictedCount)
       API.Unmount(nil,conditionalTimer)
-      -- A resource shares one native listener across observers, bars, and its regen accessory.
-      do
-      local Mana=resources.Mana
-      mana,maxMana=100,250
-      local trackedMana=new(Mana,"player"):UseRegenTimer()
-      local changes,otherChanges=0,0
-      local nativeBefore=#nativeFrames
-      local unsubscribe=trackedMana:onChange(function(_,value) changes=changes+1; assert(value == mana) end)
-      local unsubscribeOther=trackedMana:onChange(function() otherChanges=otherChanges+1 end)
-      assert(#nativeFrames == nativeBefore+1)
-      local trackedEvents=nativeFrames[#nativeFrames]
-      local readsBefore=powerReads
-      mana=90
-      emit("UNIT_POWER_UPDATE","player","MANA")
-      assert(changes == 1 and otherChanges == 1 and powerReads == readsBefore+1)
-      emit("UNIT_POWER_UPDATE","player","MANA")
-      assert(changes == 1 and otherChanges == 1)
-      mana={secret=true}
-      emit("UNIT_POWER_UPDATE","player","MANA")
-      assert(changes == 1 and otherChanges == 1)
-      unsubscribe()
-      mana=80
-      emit("UNIT_POWER_UPDATE","player","MANA")
-      assert(changes == 1 and otherChanges == 2)
-      unsubscribeOther()
-      assert(next(trackedEvents.events) == nil)
-      local timers={}
-      C_Timer={NewTimer=function(delay,callback)
-        local timer={due=now+delay,callback=callback,cancelled=false}
-        function timer:Cancel() self.cancelled=true end
-        timers[#timers+1]=timer
-        return timer
-      end}
-      local function advance(time)
-        now=time
-        for _,timer in ipairs(timers) do
-          if not timer.cancelled and timer.due <= now then timer.cancelled=true; timer.callback() end
-        end
-      end
-      C_CurveUtil={CreateCurve=function()
-        local curve={points={}}
-        function curve:SetType(value) self.type=value end
-        function curve:AddPoint(x,y) self.points[#self.points+1]={x,y} end
-        return curve
-      end}
-      Enum.LuaCurveType={Step=1}
-      local spellCost=10
-      C_Spell={GetSpellPowerCost=function(id) assert(id == 635); return {{type=0,cost=spellCost}} end}
-      local resourceBar=API.Mount(nil,factory(nil,"progress",{width=220,height=14,source=trackedMana}))
-      local beforeTimer=#nativeFrames
-      local tickBar=API.Mount(nil,factory(nil,"progress",{width=218,height=2,source=trackedMana.RegenTimer}))
-      assert(#nativeFrames == beforeTimer+1 and not tickBar.shown and tickBar.onUpdate == nil)
-      now=100
-      emit("UNIT_SPELLCAST_SUCCEEDED","player","cast-id",635)
-      assert(trackedMana.RegenTimer.Phase == "fiveSecondRule" and tickBar.shown and tickBar.timer.duration == 5)
-      local initialStart,initialCalls=tickBar.timer.start,tickBar.timerCalls
-      spellCost=0
-      now=101
-      emit("UNIT_SPELLCAST_SUCCEEDED","player","cast-id",635)
-      emit("UNIT_POWER_UPDATE","player","MANA")
-      assert(tickBar.timer.start == initialStart and tickBar.timerCalls == initialCalls)
-      advance(105)
-      assert(trackedMana.RegenTimer.Phase == "estimatedTick" and tickBar.timer.start == 105 and tickBar.timer.duration == 2)
-      now=106
-      emit("UNIT_POWER_UPDATE","player","MANA")
-      advance(107)
-      assert(trackedMana.RegenTimer.Phase == "estimatedTick" and tickBar.timer.start == 107)
-      advance(109)
-      assert(not trackedMana.RegenTimer.IsActive and not tickBar.shown)
-      mana=maxMana
-      emit("UNIT_POWER_UPDATE","player","MANA")
-      assert(not tickBar.shown)
-      mana,spellCost=70,10
-      emit("UNIT_SPELLCAST_SUCCEEDED","player","cast-id",635)
-      assert(tickBar.shown and tickBar.timer.duration == 5)
-      mana=maxMana
-      emit("UNIT_POWER_UPDATE","player","MANA")
-      assert(not tickBar.shown and not trackedMana.RegenTimer.IsActive and timers[#timers].cancelled)
-      mana,spellCost={secret=true},{secret=true}
-      nativeManaAlpha=0
-      emit("UNIT_SPELLCAST_SUCCEEDED","player","cast-id",635)
-      assert(tickBar.shown and tickBar.alpha == 0) -- Native alpha masks full secret mana.
-      nativeManaAlpha=1
-      emit("UNIT_POWER_UPDATE","player","MANA")
-      assert(tickBar.alpha == 1)
-      API.Unmount(nil,tickBar)
-      assert(timers[#timers].cancelled and not trackedMana.RegenTimer.IsActive)
-      assert(trackedEvents.events.UNIT_POWER_UPDATE) -- The mana bar still consumes the source.
-      API.Unmount(nil,resourceBar)
-      assert(next(trackedEvents.events) == nil and trackedEvents.onEvent == nil)
-      local anchorView=factory(nil,"cell",{width=220,height=14},factory(nil,"progress",{
-        width="inherit",height=2,anchor="BOTTOMLEFT",relativeAnchor="BOTTOMLEFT",offset={x=0,y=1}}))
-      local anchorFrame=API.Mount(nil,anchorView)
-      local anchorChild=frames[#frames]
-      assert(anchorChild.anchor == "BOTTOMLEFT" and anchorChild.relative == anchorFrame and anchorChild.y == -1)
-      API.Unmount(nil,anchorFrame)
-      end
       -- Stock action removal is explicit, backed up before mutation, and rejects unsafe restores.
       do
       local actionAPI=__wuiraModules.require("platform.ActionBars").ActionBars
@@ -1358,28 +876,22 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
       combat=false
       emit("PLAYER_REGEN_ENABLED")
       assert(not host.shown and not lateButton.shown)
-      local oldSpell,oldOverride,oldClear=C_Spell,SetOverrideBindingClick,ClearOverrideBindings
+      local oldOverride,oldClear=SetOverrideBindingClick,ClearOverrideBindings
       local opaqueCooldown={secret=true}
-      C_Spell={
-        GetSpellName=function(id) assert(id == 679); return "Holy Strike" end,
-        GetSpellTexture=function(id) assert(id == 679); return 12345 end,
-        GetSpellCooldownDuration=function(identifier,ignoreGCD)
-          assert(identifier == "Holy Strike" and ignoreGCD == true)
-          return opaqueCooldown
-        end,
-      }
       function SetOverrideBindingClick(owner,priority,key,name,button)
         assert(not combat and not priority and _G[name] == owner)
         owner.override={key=key,name=name,button=button}
       end
       function ClearOverrideBindings(owner) assert(not combat); owner.override=nil end
-      local spellClass=__wuiraModules.require("datasources.SpellSource").SpellSource
-      local spell=construct(spellClass,679)
+      local TimerSource=__wuiraModules.require("datasources.TimerSource").TimerSource
+      local TextureSource=__wuiraModules.require("datasources.TextureSource").TextureSource
+      local cooldown=new(TimerSource,function() return opaqueCooldown end,{"SPELL_UPDATE_COOLDOWN"})
+      local texture=new(TextureSource,function() return 12345 end,{})
       local opacity=1
       local count=#frames
       local action=API.Mount(nil,factory(nil,"secureButton",{width=40,height=40,
-        action=spell.Action,binding="2",cooldown=spell.Cooldown,finishGlow=true,alpha=function() return opacity end},
-        factory(nil,"icon",{textureSource=spell.Texture,margin=1})))
+        action={type="spell",spell="Holy Strike"},binding="2",cooldown=cooldown,finishGlow=true,alpha=function() return opacity end},
+        factory(nil,"icon",{textureSource=texture,margin=1})))
       local opacityDriver=frames[#frames]
       local radial,hotkey
       for index=count+1,#frames do
@@ -1399,7 +911,7 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
       assert(action.alpha == .4 and action.attributes.type1 == "spell" and action.override.key == "2")
       opacity={secret=true}
       opacityDriver.onUpdate(opacityDriver,.05)
-      assert(action.alpha == .4) -- Restricted opacity never enters Lua comparisons.
+      assert(action.alpha == .4)
       opacity=1
       opacityDriver.onUpdate(opacityDriver,.05)
       assert(action.alpha == 1)
@@ -1407,12 +919,12 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
       emit("SPELL_UPDATE_COOLDOWN")
       assert(radial.cooldownDuration == opaqueCooldown and action.override.key == "2")
       API.Unmount(nil,action)
-      assert(action.override ~= nil) -- Protected bindings remain intact until combat ends.
+      assert(action.override ~= nil)
       combat=false
       emit("PLAYER_REGEN_ENABLED")
       assert(action.override == nil and not radial.drawBling and radial.cooldownDuration == nil)
-      C_Spell,SetOverrideBindingClick,ClearOverrideBindings=oldSpell,oldOverride,oldClear
-      UIParent.IsProtected=originalParentProtection
+      SetOverrideBindingClick,ClearOverrideBindings=oldOverride,oldClear
+            UIParent.IsProtected=originalParentProtection
       CreateFrame=originalCreateFrame
       end
       verifySecureButtons()
@@ -1731,8 +1243,6 @@ test("split TSX modules load through TOC without a global require", () => {
       import { FlowLayout } from "./ui/FlowLayout";
       import { GridLayout } from "./ui/GridLayout";
       import { DataSource } from "./datasources/DataSource";
-      import { HP, Unit } from "./datasources/Resources";
-      import { UseSource } from "./datasources/UseSource";
       declare function error(this: void, message: string): never;
       declare function print(this: void, message: string): void;
       function Box(props: { onClick?: () => number; child?: Element }, child?: Element): Element {
@@ -1768,8 +1278,6 @@ test("split TSX modules load through TOC without a global require", () => {
       const grid = GridLayout({sizing: "content", columns: 2, mode: "absolute", x: 0, y: 0});
       const flowView = <FlowLayout direction="horizontal"><Cell width={10} height={10} /><Cell width={10} height={10} /></FlowLayout>;
       const gridView = <GridLayout columns={2}>{[<Cell width={10} height={10} />, <Cell width={10} height={10} />]}</GridLayout>;
-      const hp = UseSource(HP, Unit.Player);
-      const sourceView = <progress source={hp} />;
       const staticView = <progress min={0} max={100} current={25} />;
       if (flowView.children?.length !== 2 || gridView.children?.length !== 2) error("Layout children lost");
       if (false) {

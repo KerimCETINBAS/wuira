@@ -7,6 +7,17 @@ with the release date and highlight breaking changes explicitly.
 
 ## Unreleased
 
+## 0.4.0 — 2026-10-19
+
+### Breaking
+
+- A datasource is one Blizzard call. `UseSource(UnitHealth, "player")` reads `UnitHealth`. Composite classes are removed, including `HP`, `Mana`, `Absorb`, `Prediction`, `GroupMembers`, `GroupRoster`, `Buffs`, `Debuffs`, `KnownSpells`, `SpellSource`, `UnitSource`, `ClassSource`, `SpecSource`, `EditModeLayouts`, and the cast, aura, swing, and totem timer bundles.
+
+### Added
+
+- One source for each exposed call: group size, raid roster row, unit facts, auras, spells, totems, edit mode layouts, specializations, the spell book, casts, and channels.
+- `Range`, `ReadAuras`, and `FilterAura` are helpers. `wuira/helpers` exports them. `Range(1, 5)` returns `[1, 2, 3, 4, 5]`.
+
 ## 0.3.3 — 2026-10-19
 
 ### Breaking

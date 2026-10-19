@@ -39,26 +39,22 @@ import { UI } from "wuira/ui";
 import { Icons } from "wuira/icons";
 import { BlizzardUI, ActionBars } from "wuira/platform";
 import { Nameplates } from "wuira/skins";
-import { SourceConverter, ClassSource, HP, Unit, UseSource, Absorb, Prediction, Mana, SpellSource, KnownSpells } from "wuira/datasources";
+import { SourceConverter, UseSource, UnitHealth, GetSpellName } from "wuira/datasources";
 const currentApp: WuiraApp = Wuira.App;
 if (currentApp !== Wuira.App || wuira !== Wuira) throw "Application accessor must remain stable";
 import { PaladinSpells, MageSpells, RacialSpells, GeneralSpells, BindingActions } from "wuira/spells";
 import { WarriorSpells } from "wuira/spells/WarriorSpells";
 const constantHeal = PaladinSpells.HolyLight;
 import { Cell, FlowLayout, ForEach, Window, ProgressBar, SecureButton, Button, FrameMover, KeybindCapture } from "wuira/ui";
-const hp = UseSource(HP, Unit.Player);
-const predictedHP = UseSource(HP).UsePrediction().UseAbsorb().When(value => value >= 20);
-const absorb = UseSource(Absorb, Unit.Player);
-const prediction = UseSource(Prediction, Unit.Player);
-const manaWithRegen = UseSource(Mana, Unit.Player).UseRegenTimer();
-if (manaWithRegen.RegenTimer === undefined) throw "Regen accessory missing";
+const hp = UseSource(UnitHealth, "player");
+const spellName = UseSource(GetSpellName, 635);
 if (false) {
     const transformed = UseSource(SourceConverter, hp, value => value * 2);
-    const mapped = UseSource(SourceConverter, UseSource(ClassSource, "player"), value => value?.token);
     const output: number = transformed.Value;
+    const named = UseSource(SourceConverter, spellName, value => value?.length ?? 0);
     // @ts-expect-error SourceConverter callback input types follow their source.
-    UseSource(SourceConverter, UseSource(ClassSource, "player"), value => value * 2);
-    mapped.Dispose(); transformed.Dispose();
+    UseSource(SourceConverter, UseSource(UnitHealth, "player"), value => value.length);
+    named.Dispose(); transformed.Dispose();
     const nativeTexture: number = Icons.BlessingOfFreedom_135968;
     const platform: typeof ActionBars = ActionBars;
     const stock: typeof BlizzardUI = BlizzardUI;
@@ -79,18 +75,8 @@ if (false) {
     decoded.spellId;
     // @ts-expect-error Encoded input must be a string.
     Encoding.Decode({ spellId: 635 });
-    const stop = manaWithRegen.onChange(value => console.log(value.toFixed(0)));
-    stop();
 }
-const predictedView = <ProgressBar source={predictedHP} healPrediction={{texture:"blizzard"}} absorbPrediction={{color:{r:1,g:1,b:1,a:0.5}}} />;
-if (predictedHP.Prediction === undefined || predictedHP.Absorb === undefined || predictedHP.HealPrediction !== predictedHP.Prediction || absorb.Value === undefined || prediction.Value === undefined || predictedView.kind !== "progress") throw "Prediction exports failed";
-if (false) {
-    // @ts-expect-error Sources are opened with UseSource.
-    new HP(Unit.Player);
-    // @ts-expect-error HP predicates receive numbers.
-    UseSource(HP).When(value => value.missing);
-}
-const view = <Cell width={160} height={24}><ProgressBar source={hp} /></Cell>;
+const view = <Cell width={160} height={24}><ProgressBar min={0} max={100} current={40} /></Cell>;
 const repeated = <FlowLayout width={100} height={24} direction="horizontal">
     <Cell width={1} height={1} />
     <ForEach items={[10, 20]}>{(width, index) => <Cell width={width} height={index + 1} condition={width > 0} />}</ForEach>
@@ -101,7 +87,7 @@ if (repeated.children?.length !== 5 || (repeated.children[2].props as {width:num
 const invalidLoop = <ForEach items={[1]}>{(item: string) => <Cell />}</ForEach>;
 // @ts-expect-error Conditions are booleans or boolean callbacks.
 const invalidCondition = <Cell condition="yes" />;
-const secureView = <SecureButton width={32} height={32} action={{type:"spell",spell:635,unit:Unit.Player}}><Cell /></SecureButton>;
+const secureView = <SecureButton width={32} height={32} action={{type:"spell",spell:635,unit:"player"}}><Cell /></SecureButton>;
 const slotView = <secureButton action={{type:"action",slot:25}} />;
 if (false) {
     const window = new Window({width: 800, height: 600});
@@ -120,24 +106,6 @@ if (false) {
     const capture = new KeybindCapture(() => console.log("done"));
     capture.SetActive(false);
     capture.Dispose();
-    const known = UseSource(KnownSpells);
-    const ids: readonly number[] = known.Value;
-    const learned: boolean = known.Has(20271);
-    const activeSpells = known.Entries.filter(spell => spell.isPassive === false);
-    const learnedName: string | undefined = known.Find(20271)?.name;
-    const seals = known.Filter("Seal*");
-    const sealButtons = <FlowLayout><ForEach items={seals}>{spell => <SecureButton action={{type:"spell",spell:spell.id}} />}</ForEach></FlowLayout>;
-    // @ts-expect-error Name filters must be strings.
-    known.Filter(123);
-    // @ts-expect-error Cached spell metadata is readonly.
-    activeSpells[0].name = "Changed";
-    const stop = known.onChange(spells => console.log(spells.length));
-    stop();
-    known.Dispose();
-    // @ts-expect-error Spell snapshots are readonly.
-    ids.push(20271);
-    const spell = UseSource(SpellSource, 20271);
-    const button = <SecureButton action={spell.Action} binding="1" cooldown={spell.Cooldown} finishGlow alpha={() => 0.4} />;
     // @ts-expect-error Key bindings are strings.
     const invalidBinding = <SecureButton binding={1} />;
 }
@@ -148,7 +116,7 @@ const invalidSecureAction = <SecureButton action={{type:"spell"}} />;
 const invalidClickThrough = <SecureButton clickThrough />;
 // @ts-expect-error Secure units must be static tokens, not callbacks.
 const invalidSecureUnit = <SecureButton action={{type:"spell",spell:635,unit:() => "target"}} />;
-if (view.kind !== "cell" || view.child?.source !== hp) throw "Public exports failed";
+if (view.kind !== "cell" || view.child?.kind !== "progress" || hp === undefined || spellName === undefined) throw "Public exports failed";
 // @ts-expect-error Width must be a number or inherit.
 const invalid = <Cell width="invalid" />;
 import { Store, StoreRegistry } from "wuira/store";

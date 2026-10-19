@@ -3,12 +3,12 @@
 `SourceConverter` transforms a readable source with a typed callback. It consumes change notifications, shares one upstream subscription across observers, and does not create a timer or dispose the shared input. Sources without notifications remain available as checked one-time reads.
 
 ```ts
-import { UseSource, SourceConverter, HP, ClassSource, Unit } from "wuira/datasources";
+import { UseSource, SourceConverter, UnitHealth, UnitClass } from "wuira/datasources";
 
-const hp = UseSource(HP, Unit.Player);
+const hp = UseSource(UnitHealth, "player");
 const doubled = UseSource(SourceConverter, hp, value => value * 2);
-const characterClass = UseSource(ClassSource, Unit.Player);
-const token = UseSource(SourceConverter, characterClass, info => info?.token);
+const characterClass = UseSource(UnitClass, "player");
+const token = UseSource(SourceConverter, characterClass, info => info.classFile);
 const stop = doubled.BindTo(value => console.log(value));
 
 // On removal:
@@ -22,6 +22,6 @@ characterClass.Dispose();
 
 `onChange()` observes future readable output changes; `BindTo()` also applies the current readable value immediately. Identical scalar outputs do not emit again. `When()` filters emissions without changing the checked getter. `Dispose()` releases observers while leaving the input available to other consumers.
 
-Restricted values, including nested secret fields, never reach a conversion callback. Restrictions are checked when consumed; combat alone does not mark a value secret. ClassSource subscriptions follow unit identity changes and native events, releasing listeners when the last consumer unsubscribes.
+Restricted values, including nested secret fields, never reach a conversion callback. Restrictions are checked when consumed; combat alone does not mark a value secret. A native source is a pull of one call. It notifies a converter only when that source exposes `onChange`.
 
 The SDK accepts TypeScript callbacks. Editable case rules and math formulas are LumaUI builder factories, implemented using this generic source. Converters produce data; protected button actions remain subject to native combat restrictions.

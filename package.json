@@ -4,7 +4,7 @@
     "type": "git",
     "url": "git+https://github.com/KerimCETINBAS/wuira.git"
   },
-  "version": "0.3.3",
+  "version": "0.4.0",
   "author": {
     "name": "Kerim Cetinbas",
     "email": "a.cetinbas@icloud.com"
@@ -54,6 +54,10 @@
     "./icons": {
       "types": "./lib/icons/index.d.ts",
       "default": "./lib/icons/index.lua"
+    },
+    "./helpers": {
+      "types": "./lib/helpers/index.d.ts",
+      "default": "./lib/helpers/index.lua"
     }
   },
   "typesVersions": {
@@ -84,6 +88,9 @@
       ],
       "icons": [
         "lib/icons/index.d.ts"
+      ],
+      "helpers": [
+        "lib/helpers/index.d.ts"
       ]
     }
   },

@@ -144,6 +144,9 @@ interface wuiraNativeAuraData {
     expirationTime?: number;
 }
 declare const C_UnitAuras: {
+    GetAuraDataByIndex?: (this: void, unit: string, index: number, filter: string) => {
+        spellId: number; name: string; icon: number; sourceUnit?: string;
+    } | undefined;
     GetAuraDataBySpellName?: (this: void, unit: string, name: string, filter: string) => wuiraNativeAuraData | undefined;
     GetAuraDuration?: (this: void, unit: string, id: number) => import("../datasources/TimerSource").NativeDuration | undefined;
 } | undefined;

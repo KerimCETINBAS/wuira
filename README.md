@@ -57,18 +57,18 @@ npm run build
 Open every datasource with `UseSource`. Those classes have no public constructor.
 
 ```tsx
-import { UseSource, HP, Mana, Unit } from "wuira/datasources";
+import { UseSource, GetNumGroupMembers, UnitHealth, GetAuraDataByIndex } from "wuira/datasources";
+import { FilterAura, Range, ReadAuras } from "wuira/helpers";
 
-const hp = UseSource(HP, Unit.Player).UsePrediction().UseAbsorb();
-const mana = UseSource(Mana, Unit.Player).UseRegenTimer();
-
-<progress height={24} source={hp} />
-<progress height={24} source={mana} />
+const count = UseSource(GetNumGroupMembers);
+const indexes = Range(1, count.Value);
+const health = UseSource(UnitHealth, "player");
+const aura = UseSource(GetAuraDataByIndex, "target", 1, "HELPFUL");
+const auras = ReadAuras("target", "HELPFUL");
+const present = FilterAura(auras, "Fortitude");
 ```
 
-`UsePrediction()` and `UseAbsorb()` append the same `Prediction` and `Absorb` sources for that unit. Read them as `hp.Prediction` and `hp.Absorb`. Incoming heals are `UnitGetIncomingHeals`. Absorbs are `UnitGetTotalAbsorbs`. `hp.Value`, `hp.Max`, and `hp.Percent` stay the three health reads.
-
-Other sources include `AuraTimer`, `GlobalCooldown`, `CastTimer`, `SpellCooldown`, `SwingTimer`, `GroupMembers`, `PartyMembers`, `RaidMembers`, `Buffs`, `Debuffs`, `KnownSpells`, `Spells`, `UnitSource`, `ClassSource`, `SpecSource`, and `SpellSource`.
+Each source is one native call. Arguments and the returned value match that call. `Range`, `ReadAuras`, and `FilterAura` are helpers: they walk or query values the caller already has. `TimerSource` still binds a native duration to a progress bar or cooldown.
 
 ## Layout
 
@@ -97,14 +97,17 @@ Supported action types: `spell`, `item`, `macro`, `action`, and `target`. Action
 ```tsx
 import { UI } from "wuira/ui";
 import { Nameplates } from "wuira/skins";
-import { UseSource, HP } from "wuira/datasources";
+import { UseSource, UnitHealth } from "wuira/datasources";
 
 const plates = Nameplates
     .Apply(p => p.GUID === configuredGUID, p => {
         if (p.Native.healthBar) p.Size(p.Native.healthBar, 140, 12);
     })
     .Replace(() => true, p => (
-        <progress width={140} height={12} source={UseSource(HP, p.Unit)} />
+        <cell width={140} height={12} onMount={() => {
+            const health = UseSource(UnitHealth, p.Unit);
+            return () => health.Dispose();
+        }} />
     ));
 
 // plates.Dispose();

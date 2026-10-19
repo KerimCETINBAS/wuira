@@ -1,5 +1,3 @@
-import { resolveUnit } from "../datasources/UnitSource";
-import type { UnitInput } from "../datasources/UnitSource";
 import type { CellProps } from "./Cell";
 import { UI } from "./primitives/jsx";
 
@@ -12,23 +10,22 @@ interface PortraitHost extends wuiraNativeFrame {
 }
 declare function SetPortraitTexture(this: void, texture: wuiraNativeTexture, unit: string, disablePortraitMask?: boolean): void;
 
-export function unitPortrait(props: Partial<CellProps>, input: UnitInput, crop?: readonly number[], preview = false) {
-    if (issecretvalue(input) || typeof input === "string" && input.trim() === "") throw "Unit portrait requires a public unit token";
-    const target = resolveUnit(input);
+export function unitPortrait(props: Partial<CellProps>, unit: string, crop?: readonly number[], preview = false) {
+    if (issecretvalue(unit) || unit.trim() === "") throw "Unit portrait requires a public unit token";
     return UI.createElement("cell", { ...props, clickThrough: true, onMount: (frame: wuiraNativeFrame) => {
         const host = frame as PortraitHost;
         const button = preview ? undefined : CreateFrame("Button", undefined, UIParent, "SecureActionButtonTemplate");
         const owner = button ?? host;
         const texture = owner.CreateTexture(undefined, "OVERLAY");
         texture.SetAllPoints(owner);
-        let buttonUnit = target.Token;
+        let buttonUnit = unit;
         let stopUnit: (() => void) | undefined;
         let stopped = false, stopping = false, elapsed = 0;
         let lastX: number | undefined, lastY: number | undefined, lastWidth: number | undefined, lastHeight: number | undefined;
         let lastStrata: string | undefined, lastLevel: number | undefined, lastAlpha: number | undefined;
         const draw = () => {
             if (stopped || stopping) return;
-            SetPortraitTexture(texture, target.Token, true);
+            SetPortraitTexture(texture, unit, true);
             const uv = crop ?? [0, 1, 0, 1];
             texture.SetTexCoord(uv[0], uv[1], uv[2], uv[3]);
         };
@@ -44,7 +41,7 @@ export function unitPortrait(props: Partial<CellProps>, input: UnitInput, crop?:
         };
         const sync = () => {
             if (button === undefined || stopped || stopping || InCombatLockdown()) return;
-            if (buttonUnit !== target.Token) { button.SetAttribute("unit", target.Token); buttonUnit = target.Token; }
+            if (buttonUnit !== unit) { button.SetAttribute("unit", unit); buttonUnit = unit; }
             if (!host.IsVisible()) { if (button.IsShown()) button.Hide(); return; }
             const [x, y] = host.GetCenter();
             if (x === undefined || y === undefined) return;
@@ -67,7 +64,7 @@ export function unitPortrait(props: Partial<CellProps>, input: UnitInput, crop?:
             if (button !== undefined) {
                 button.RegisterForClicks("LeftButtonUp", "RightButtonUp");
                 button.SetID(0); button.SetAttribute("useOnKeyDown", false);
-                button.SetAttribute("unit", target.Token);
+                button.SetAttribute("unit", unit);
                 button.SetAttribute("type1", "target"); button.SetAttribute("type2", "togglemenu");
                 button.EnableMouse(true);
                 host.SetScript("OnUpdate", (_frame, delta) => {
@@ -78,14 +75,13 @@ export function unitPortrait(props: Partial<CellProps>, input: UnitInput, crop?:
                 owner.RegisterEvent("PLAYER_REGEN_ENABLED");
             }
             for (const event of ["UNIT_PORTRAIT_UPDATE", "UNIT_MODEL_CHANGED", "PORTRAITS_UPDATED", "PLAYER_ENTERING_WORLD"]) owner.RegisterEvent(event);
-            if (target.Token.includes("target")) owner.RegisterEvent("PLAYER_TARGET_CHANGED");
-            if (target.Token.includes("focus")) owner.RegisterEvent("PLAYER_FOCUS_CHANGED");
+            if (unit.includes("target")) owner.RegisterEvent("PLAYER_TARGET_CHANGED");
+            if (unit.includes("focus")) owner.RegisterEvent("PLAYER_FOCUS_CHANGED");
             owner.SetScript("OnEvent", (_frame, event, eventUnit) => {
                 if (event === "PLAYER_REGEN_ENABLED") {
                     if (stopping) cleanup(); else sync();
-                } else if (event !== "UNIT_PORTRAIT_UPDATE" && event !== "UNIT_MODEL_CHANGED" || eventUnit === target.Token) draw();
+                } else if (event !== "UNIT_PORTRAIT_UPDATE" && event !== "UNIT_MODEL_CHANGED" || eventUnit === unit) draw();
             });
-            stopUnit = target.onTokenChange(() => { draw(); sync(); });
             draw(); sync();
         } catch (failure) { cleanup(); throw failure; }
         return () => {
