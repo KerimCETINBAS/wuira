@@ -1,4 +1,5 @@
 import { TimerSource } from "./TimerSource";
+import { registerSource } from "./Source";
 import type { NativeDuration } from "./TimerSource";
 
 export type TotemTimerStatus = "active" | "inactive" | "restricted" | "unavailable";
@@ -7,9 +8,10 @@ export type TotemTimerStatus = "active" | "inactive" | "restricted" | "unavailab
 export class TotemTimer extends TimerSource {
     private status: TotemTimerStatus = "inactive";
 
-    public constructor(public readonly spell: number | string) {
+    protected constructor(public readonly spell: number | string) {
         super(() => this.ReadDuration(), ["PLAYER_TOTEM_UPDATE", "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_ENABLED", "SPELLS_CHANGED"]);
     }
+    static { registerSource(TotemTimer, props => new TotemTimer(props[0] as number | string)); }
 
     public get Status(): TotemTimerStatus { this.ReadDuration(); return this.status; }
 

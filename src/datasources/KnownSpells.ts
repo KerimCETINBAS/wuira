@@ -1,4 +1,5 @@
 import { DataSource } from "./DataSource";
+import { registerSource } from "./Source";
 
 declare const string: { match(this: void, value: string, pattern: string): string | undefined };
 
@@ -24,7 +25,7 @@ export class KnownSpells extends DataSource<readonly number[]> {
     private readonly frame: wuiraNativeFrame;
     private disposed = false;
 
-    public constructor() {
+    protected constructor() {
         super([]);
         this.frame = CreateFrame("Frame", undefined, UIParent);
         for (const event of ["PLAYER_ENTERING_WORLD", "PLAYER_LEVEL_UP", "SPELLS_CHANGED",
@@ -35,6 +36,7 @@ export class KnownSpells extends DataSource<readonly number[]> {
         this.frame.SetScript("OnEvent", () => this.Refresh());
         this.Refresh();
     }
+    static { registerSource(KnownSpells, () => new KnownSpells()); }
 
     public get Status(): KnownSpellsStatus { return this.status; }
     /** Detached cached metadata, with no native reads. Unreadable books return no entries. */

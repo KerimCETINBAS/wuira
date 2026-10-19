@@ -54,17 +54,32 @@ npm run build
 
 ## Data sources
 
-```tsx
-import { HP, Mana, Unit } from "wuira/datasources";
+Open every datasource with `UseSource`. Those classes have no public constructor.
 
-const hp = new HP(Unit.Player).UseHealPrediction().UseAbsorbPrediction();
-const mana = new Mana(Unit.Player).UseRegenTimer();
+```tsx
+import { UseSource, HP, Mana, Unit } from "wuira/datasources";
+
+const hp = UseSource(HP, Unit.Player).UsePrediction().UseAbsorb();
+const mana = UseSource(Mana, Unit.Player).UseRegenTimer();
 
 <progress height={24} source={hp} />
 <progress height={24} source={mana} />
 ```
 
+`UsePrediction()` and `UseAbsorb()` append the same `Prediction` and `Absorb` sources for that unit. Read them as `hp.Prediction` and `hp.Absorb`. Incoming heals are `UnitGetIncomingHeals`. Absorbs are `UnitGetTotalAbsorbs`. `hp.Value`, `hp.Max`, and `hp.Percent` stay the three health reads.
+
 Other sources include `AuraTimer`, `GlobalCooldown`, `CastTimer`, `SpellCooldown`, `SwingTimer`, `GroupMembers`, `PartyMembers`, `RaidMembers`, `Buffs`, `Debuffs`, `KnownSpells`, `Spells`, `UnitSource`, `ClassSource`, `SpecSource`, and `SpellSource`.
+
+## Layout
+
+`width` and `height` accept a number, `"inherit"`, or `"fill"`. Fill siblings share the space left after fixed children. `columnGap` is horizontal space. `rowGap` is vertical space.
+
+```tsx
+<flow width={200} height={40} direction="ltr" columnGap={4} rowGap={2} alignY="center">
+    <cell width="fill" height={12} />
+    <cell width={40} height={12} />
+</flow>
+```
 
 ## Secure buttons
 
@@ -82,14 +97,14 @@ Supported action types: `spell`, `item`, `macro`, `action`, and `target`. Action
 ```tsx
 import { UI } from "wuira/ui";
 import { Nameplates } from "wuira/skins";
-import { HP } from "wuira/datasources";
+import { UseSource, HP } from "wuira/datasources";
 
 const plates = Nameplates
     .Apply(p => p.GUID === configuredGUID, p => {
         if (p.Native.healthBar) p.Size(p.Native.healthBar, 140, 12);
     })
     .Replace(() => true, p => (
-        <progress width={140} height={12} source={new HP(p.Unit)} />
+        <progress width={140} height={12} source={UseSource(HP, p.Unit)} />
     ));
 
 // plates.Dispose();

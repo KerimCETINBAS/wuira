@@ -1,4 +1,5 @@
 import { DataSource } from "./DataSource";
+import { registerSource } from "./Source";
 import { UnitSource, resolveUnit } from "./UnitSource";
 import type { UnitInput } from "./UnitSource";
 
@@ -77,9 +78,11 @@ export abstract class AuraSource extends DataSource<readonly Aura[]> {
 }
 
 export class Buffs extends AuraSource {
-    public constructor(unit: UnitInput) { super(unit, "HELPFUL"); }
+    protected constructor(unit: UnitInput) { super(unit, "HELPFUL"); }
+    static { registerSource(Buffs, props => new Buffs(props[0] as UnitInput)); }
 }
 
 export class Debuffs extends AuraSource {
-    public constructor(unit: UnitInput) { super(unit, "HARMFUL"); }
+    protected constructor(unit: UnitInput) { super(unit, "HARMFUL"); }
+    static { registerSource(Debuffs, props => new Debuffs(props[0] as UnitInput)); }
 }

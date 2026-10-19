@@ -1,4 +1,5 @@
 import { DataSource } from "./DataSource";
+import { registerSource } from "./Source";
 import type { ReadResult } from "./DataSource";
 
 /** Structural contract: converters can consume a shared source without owning it. */
@@ -26,9 +27,10 @@ export class SourceConverter<TInput, TOutput> extends DataSource<TOutput> {
     private previous?: TOutput;
     private readable = false;
 
-    public constructor(private readonly input: ValueSource<TInput>, private readonly convert: (value: TInput) => TOutput) {
+    protected constructor(private readonly input: ValueSource<TInput>, private readonly convert: (value: TInput) => TOutput) {
         super(undefined as TOutput);
     }
+    static { registerSource(SourceConverter, props => new SourceConverter(props[0] as ValueSource<never>, props[1] as (value: never) => never)); }
 
     protected override GetValue(): TOutput {
         if (this.disposed) error("SourceConverter is disposed");

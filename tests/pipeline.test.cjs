@@ -967,14 +967,14 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
       health=50
       local plainHP=new(HP)
       local plainFrame=API.Mount(nil,factory(nil,"progress",{width=100,height=10,source=plainHP}))
-      assert(plainHP.HealPrediction == nil and plainHP.AbsorbPrediction == nil)
+      assert(plainHP.Prediction == nil and plainHP.Absorb == nil)
       assert(not plainFrame.events.UNIT_HEAL_PREDICTION and not plainFrame.events.UNIT_ABSORB_AMOUNT_CHANGED)
       assert(healReads == 0 and absorbReads == 0)
       API.Unmount(nil,plainFrame)
-      local predictedHP=new(HP):UseHealPrediction():UseAbsorbPrediction()
-      local firstHealChannel=predictedHP.HealPrediction
-      predictedHP:UseHealPrediction():UseAbsorbPrediction()
-      assert(firstHealChannel == predictedHP.HealPrediction and healReads == 0 and absorbReads == 0)
+      local predictedHP=new(HP):UsePrediction():UseAbsorb()
+      local firstHealChannel=predictedHP.Prediction
+      predictedHP:UsePrediction():UseAbsorb()
+      assert(firstHealChannel == predictedHP.Prediction and predictedHP.HealPrediction == predictedHP.Prediction and predictedHP.AbsorbPrediction == predictedHP.Absorb and healReads == 0 and absorbReads == 0)
       predictedHP:When(function(_,value) conditionCalls=conditionCalls+1; return value >= 20 end)
       predictedHP:When(function(_,value) return value < 100 end)
       health=10
@@ -998,7 +998,7 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
       incoming,shield={secret=true},{secret=true}
       emit("UNIT_HEAL_PREDICTION","player")
       assert(healFrame.value == incoming and shieldFrame.value == shield)
-      assert(not pcall(function() return predictedHP.HealPrediction.Value end))
+      assert(not pcall(function() return predictedHP.Prediction.Value end))
       local priorConditions,priorHealReads=conditionCalls,healReads
       health={secret=true}
       emit("UNIT_HEALTH","player")
@@ -1009,7 +1009,7 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
       health,incoming,shield=25,0,0
       emit("UNIT_HEALTH","player")
       assert(predictedFrame.shown and healFrame.value == 0 and shieldFrame.value == 0)
-      assert(predictedHP.Value == 25 and predictedHP.HealPrediction.Value == 0)
+      assert(predictedHP.Value == 25 and predictedHP.Prediction.Value == 0)
       API.Unmount(nil,predictedFrame)
       assert(predictedFrame.onEvent == nil and next(predictedFrame.events) == nil and not healFrame.shown)
       local hiddenHP=new(HP):When(function() return true end)
@@ -1017,16 +1017,16 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
       emit("UNIT_HEALTH","player")
       assert(not hiddenFrame.shown) -- source activation must not override a cell predicate
       API.Unmount(nil,hiddenFrame)
-      local onlyHeal=new(HP):UseHealPrediction()
+      local onlyHeal=new(HP):UsePrediction()
       local onlyHealFrame=API.Mount(nil,factory(nil,"progress",{width=100,height=10,source=onlyHeal,healPrediction=false}))
-      assert(onlyHeal.AbsorbPrediction == nil and not onlyHealFrame.events.UNIT_ABSORB_AMOUNT_CHANGED)
+      assert(onlyHeal.Absorb == nil and not onlyHealFrame.events.UNIT_ABSORB_AMOUNT_CHANGED)
       assert(onlyHealFrame.shown)
       API.Unmount(nil,onlyHealFrame)
       for _,vertical in ipairs({false,true}) do
         for _,reverse in ipairs({false,true}) do
           local count=#frames
           local orientedFrame=API.Mount(nil,factory(nil,"progress",{width=100,height=10,
-            source=new(HP):UseHealPrediction():UseAbsorbPrediction(),
+            source=new(HP):UsePrediction():UseAbsorb(),
             orientation=vertical and "vertical" or "horizontal",reverse=reverse}))
           local h,a=frames[count+2],frames[count+3]
           local point=vertical and (reverse and "TOPLEFT" or "BOTTOMLEFT") or (reverse and "TOPRIGHT" or "TOPLEFT")
@@ -1038,8 +1038,8 @@ test("Cell positions use screen coordinates, parent offsets and explicit referen
       end
       local unsupportedHeals,unsupportedAbsorbs=UnitGetIncomingHeals,UnitGetTotalAbsorbs
       UnitGetIncomingHeals,UnitGetTotalAbsorbs=nil,nil
-      local unsupportedHP=new(HP):UseHealPrediction():UseAbsorbPrediction()
-      assert(not unsupportedHP.HealPrediction.IsAvailable and not unsupportedHP.AbsorbPrediction.IsAvailable)
+      local unsupportedHP=new(HP):UsePrediction():UseAbsorb()
+      assert(not unsupportedHP.Prediction.IsAvailable and not unsupportedHP.Absorb.IsAvailable)
       local unsupportedCount=#frames
       local unsupportedFrame=API.Mount(nil,factory(nil,"progress",{width=100,height=10,source=unsupportedHP}))
       assert(#frames == unsupportedCount+2 and unsupportedFrame.shown)
@@ -1732,6 +1732,7 @@ test("split TSX modules load through TOC without a global require", () => {
       import { GridLayout } from "./ui/GridLayout";
       import { DataSource } from "./datasources/DataSource";
       import { HP, Unit } from "./datasources/Resources";
+      import { UseSource } from "./datasources/UseSource";
       declare function error(this: void, message: string): never;
       declare function print(this: void, message: string): void;
       function Box(props: { onClick?: () => number; child?: Element }, child?: Element): Element {
@@ -1767,7 +1768,7 @@ test("split TSX modules load through TOC without a global require", () => {
       const grid = GridLayout({sizing: "content", columns: 2, mode: "absolute", x: 0, y: 0});
       const flowView = <FlowLayout direction="horizontal"><Cell width={10} height={10} /><Cell width={10} height={10} /></FlowLayout>;
       const gridView = <GridLayout columns={2}>{[<Cell width={10} height={10} />, <Cell width={10} height={10} />]}</GridLayout>;
-      const hp = new HP(Unit.Player);
+      const hp = UseSource(HP, Unit.Player);
       const sourceView = <progress source={hp} />;
       const staticView = <progress min={0} max={100} current={25} />;
       if (flowView.children?.length !== 2 || gridView.children?.length !== 2) error("Layout children lost");

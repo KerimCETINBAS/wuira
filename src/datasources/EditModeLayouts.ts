@@ -1,4 +1,5 @@
 import { DataSource } from "./DataSource";
+import { registerSource } from "./Source";
 
 interface NativeLayout { layoutName: string; layoutType: number; interfaceStyle?: number; }
 interface NativeLayouts { layouts: NativeLayout[]; activeLayout: number; }
@@ -27,7 +28,7 @@ export class EditModeLayouts extends DataSource<EditModeLayoutSnapshot> {
     private readonly frame: wuiraNativeFrame;
     private disposed = false;
 
-    public constructor() {
+    protected constructor() {
         super({ layouts: [] });
         this.frame = CreateFrame("Frame", undefined, UIParent);
         for (const event of ["EDIT_MODE_LAYOUTS_UPDATED", "PLAYER_ENTERING_WORLD", "PLAYER_SPECIALIZATION_CHANGED"]) this.frame.RegisterEvent(event);
@@ -35,6 +36,7 @@ export class EditModeLayouts extends DataSource<EditModeLayoutSnapshot> {
             this.Refresh(event === "EDIT_MODE_LAYOUTS_UPDATED" ? value : undefined));
         this.Refresh();
     }
+    static { registerSource(EditModeLayouts, () => new EditModeLayouts()); }
     public get Status(): EditModeLayoutsStatus { return this.status; }
     public get Layouts(): readonly EditModeLayout[] { return this.Value.layouts; }
     public get Active(): EditModeLayout | undefined { return this.Value.active; }

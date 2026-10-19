@@ -1,5 +1,6 @@
 import { DataSource } from "./DataSource";
 import { NativeNumberSource } from "./NativeNumberSource";
+import { UseSource } from "./UseSource";
 
 export interface ProgressOverrides {
     min?: number;
@@ -21,9 +22,9 @@ export abstract class ProgressSource extends DataSource<number> {
         current: () => number; min: () => number; max: () => number; percent: () => number;
     }) {
         super(0);
-        this.Min = new NativeNumberSource(readers.min);
-        this.Max = new NativeNumberSource(readers.max);
-        this.Percent = new NativeNumberSource(readers.percent);
+        this.Min = UseSource(NativeNumberSource, readers.min);
+        this.Max = UseSource(NativeNumberSource, readers.max);
+        this.Percent = UseSource(NativeNumberSource, readers.percent);
     }
 
     protected override GetValue(): number { return this.readers.current(); }

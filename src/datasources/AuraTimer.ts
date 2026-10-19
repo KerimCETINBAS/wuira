@@ -1,4 +1,6 @@
 import { TimerSource } from "./TimerSource";
+import { registerSource } from "./Source";
+import { UseSource } from "./UseSource";
 import type { NativeDuration } from "./TimerSource";
 import { TextureSource } from "./TextureSource";
 import { UnitSource, resolveUnit } from "./UnitSource";
@@ -16,13 +18,14 @@ export class AuraTimer extends TimerSource {
     public readonly target: UnitSource;
     public readonly Texture: TextureSource;
     private status: AuraTimerStatus = "inactive";
-    public constructor(unit: UnitInput, private readonly options: AuraTimerOptions) {
+    protected constructor(unit: UnitInput, private readonly options: AuraTimerOptions) {
         const target = resolveUnit(unit);
         const events = ["UNIT_AURA", "PLAYER_ENTERING_WORLD", "PLAYER_TARGET_CHANGED", "PLAYER_FOCUS_CHANGED", "SPELLS_CHANGED"];
         super(() => this.ReadDuration(), events, target.Token);
         this.target = target;
-        this.Texture = new TextureSource(() => this.ReadAura()?.icon, events, target.Token);
+        this.Texture = UseSource(TextureSource, () => this.ReadAura()?.icon, events, target.Token);
     }
+    static { registerSource(AuraTimer, props => new AuraTimer(props[0] as UnitInput, props[1] as AuraTimerOptions)); }
     public get Status(): AuraTimerStatus { this.ReadAura(); return this.status; }
 
     private ReadAura(): wuiraNativeAuraData | undefined {

@@ -1,4 +1,5 @@
 import { ProgressSource } from "./ProgressSource";
+import { registerSource } from "./Source";
 import type { ProgressOverrides } from "./ProgressSource";
 
 declare function GetTime(this: void): number;
@@ -26,7 +27,7 @@ export class SwingTimer extends ProgressSource {
     private events?: wuiraNativeFrame;
     private readonly bindings = new Set<() => void>();
 
-    public constructor(public readonly hand: SwingHand = SwingHand.MainHand) {
+    protected constructor(public readonly hand: SwingHand = SwingHand.MainHand) {
         // Readers execute only after construction has completed.
         super({
             current: () => this.Remaining(), min: () => 0, max: () => this.duration,
@@ -34,6 +35,7 @@ export class SwingTimer extends ProgressSource {
         });
         this.Start();
     }
+    static { registerSource(SwingTimer, props => new SwingTimer(props[0] as SwingHand | undefined)); }
 
     /** False until a readable swing event is received, including after reload/reset. */
     public get HasTiming(): boolean { return this.known && !this.restricted; }

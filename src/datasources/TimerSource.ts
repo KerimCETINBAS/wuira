@@ -1,4 +1,5 @@
 import { DataSource } from "./DataSource";
+import { registerSource } from "./Source";
 import type { ProgressOverrides } from "./ProgressSource";
 
 /** Opaque native object: pass it to the renderer instead of doing Lua arithmetic. */
@@ -16,8 +17,9 @@ interface TimerBar extends wuiraNativeStatusBar {
 export class TimerSource extends DataSource<NativeDuration | undefined> {
     private boundDuration?: NativeDuration;
     private bindingCount = 0;
-    public constructor(private readonly read: () => NativeDuration | undefined,
+    protected constructor(private readonly read: () => NativeDuration | undefined,
         private readonly events: readonly string[], private readonly unit?: string) { super(undefined); }
+    static { registerSource(TimerSource, props => new TimerSource(props[0] as () => NativeDuration | undefined, props[1] as readonly string[], props[2] as string | undefined)); }
     protected override GetValue() { return this.read(); }
     public get IsActive(): boolean {
         const duration = this.bindingCount > 0 ? this.boundDuration : this.read();

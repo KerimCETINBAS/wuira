@@ -1,4 +1,6 @@
 import { DataSource } from "./DataSource";
+import { registerSource } from "./Source";
+import { UseSource } from "./UseSource";
 
 declare function UnitGUID(this: void, unit: string): string | undefined;
 declare function UnitIsPlayer(this: void, unit: string): boolean;
@@ -30,7 +32,7 @@ export class UnitSource extends DataSource<UnitIdentity | undefined> {
     private readonly listeners = new Set<() => void>();
     private readonly tokenListeners = new Set<() => void>();
     private events?: wuiraNativeFrame;
-    public constructor(private token: string) {
+    protected constructor(private token: string) {
         super(undefined);
         this.Is = new UnitPredicates(() => this.Token);
     }
@@ -71,11 +73,12 @@ export class UnitSource extends DataSource<UnitIdentity | undefined> {
         if (this.restricted || guid === undefined) return undefined;
         return { token: this.Token, guid };
     }
+    static { registerSource(UnitSource, props => new UnitSource(props[0] as string)); }
 }
 
 export type UnitInput = string | UnitSource;
 
 /** Reuse explicit unit references; string inputs remain a convenience shorthand. */
 export function resolveUnit(unit: UnitInput): UnitSource {
-    return typeof unit === "string" ? new UnitSource(unit) : unit;
+    return typeof unit === "string" ? UseSource(UnitSource, unit) : unit;
 }

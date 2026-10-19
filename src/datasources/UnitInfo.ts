@@ -1,4 +1,6 @@
 import { DataSource } from "./DataSource";
+import { registerSource } from "./Source";
+import { UseSource } from "./UseSource";
 import { UnitSource, resolveUnit } from "./UnitSource";
 import type { UnitInput } from "./UnitSource";
 
@@ -29,7 +31,8 @@ export class ClassSource extends DataSource<ClassInfo | undefined> {
     private events?: wuiraNativeFrame;
     private stopUnit?: () => void;
     public readonly target: UnitSource;
-    public constructor(unit: UnitInput) { super(undefined); this.target = resolveUnit(unit); }
+    protected constructor(unit: UnitInput) { super(undefined); this.target = resolveUnit(unit); }
+    static { registerSource(ClassSource, props => new ClassSource(props[0] as UnitInput)); }
     public get unit(): string { return this.target.Token; }
     protected override HasSecretFields(): boolean { return this.restricted; }
     protected override GetValue(): ClassInfo | undefined {
@@ -84,7 +87,8 @@ export class SpecSource extends DataSource<readonly SpecializationInfo[] | undef
     private status: InspectStatus = "idle";
 
     public readonly target: UnitSource;
-    public constructor(unit: UnitInput) { super(undefined); this.target = resolveUnit(unit); }
+    protected constructor(unit: UnitInput) { super(undefined); this.target = resolveUnit(unit); }
+    static { registerSource(SpecSource, props => new SpecSource(props[0] as UnitInput)); }
     public get unit(): string { return this.target.Token; }
     public get Status(): InspectStatus {
         const guid = UnitGUID(this.unit);
@@ -113,7 +117,7 @@ export class SpecSource extends DataSource<readonly SpecializationInfo[] | undef
             this.status = "unsupported";
             return undefined;
         }
-        const classes = new ClassSource(this.target);
+        const classes = UseSource(ClassSource, this.target);
         if (classes.IsSecret()) { this.restricted = true; return undefined; }
         const info = classes.Value;
         if (info === undefined) return undefined;

@@ -56,11 +56,11 @@ export function renderProgress(item: RenderedCell, tree: MountedTree, onActiveCh
                 }
                 return layer;
             };
-            if (source.HealPrediction?.IsAvailable === true && props.healPrediction !== false) {
+            if (source.Prediction?.IsAvailable === true && props.healPrediction !== false) {
                 healPredictionBar = overlay({ ...props.healPrediction,
                     color: props.healPrediction?.color ?? { r: 0.4, g: 1, b: 0.5, a: 0.5 } }, true);
             }
-            if (source.AbsorbPrediction?.IsAvailable === true && props.absorbPrediction !== false) {
+            if (source.Absorb?.IsAvailable === true && props.absorbPrediction !== false) {
                 absorbPredictionBar = overlay({ ...props.absorbPrediction,
                     color: props.absorbPrediction?.color ?? { r: 0.8, g: 0.9, b: 1, a: 0.55 } }, false);
             }

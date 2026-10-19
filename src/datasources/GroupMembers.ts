@@ -1,4 +1,5 @@
 import { DataSource } from "./DataSource";
+import { registerSource } from "./Source";
 
 declare const IsInRaid: ((this: void) => boolean) | undefined;
 declare const GetNumGroupMembers: ((this: void) => number) | undefined;
@@ -11,7 +12,8 @@ export class GroupMembers extends DataSource<readonly string[]> {
     private readonly listeners = new Set<(units: readonly string[]) => void>();
     private frame?: wuiraNativeFrame;
 
-    public constructor(public readonly scope: GroupScope = "auto") { super([]); }
+    protected constructor(public readonly scope: GroupScope = "auto") { super([]); }
+    static { registerSource(GroupMembers, props => new GroupMembers(props[0] as GroupScope | undefined)); }
     /** Roster/connection events, with one listener frame while observed. No polling. */
     public onChange(listener: (units: readonly string[]) => void): () => void {
         this.listeners.add(listener);
@@ -61,10 +63,12 @@ export class GroupMembers extends DataSource<readonly string[]> {
 
 /** Includes the player in a party; empty when solo or in a raid. */
 export class PartyMembers extends GroupMembers {
-    public constructor() { super("party"); }
+    protected constructor() { super("party"); }
+    static { registerSource(PartyMembers, () => new PartyMembers()); }
 }
 
 /** Includes the player through their raidN token; empty outside a raid. */
 export class RaidMembers extends GroupMembers {
-    public constructor() { super("raid"); }
+    protected constructor() { super("raid"); }
+    static { registerSource(RaidMembers, () => new RaidMembers()); }
 }

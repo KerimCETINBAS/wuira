@@ -1,4 +1,6 @@
 import { DataSource } from "./DataSource";
+import { registerSource } from "./Source";
+import { UseSource } from "./UseSource";
 import { GroupMembers } from "./GroupMembers";
 import type { GroupScope } from "./GroupMembers";
 
@@ -20,9 +22,10 @@ export class GroupRoster extends DataSource<readonly GroupRosterMember[]> {
     private snapshot: readonly GroupRosterMember[] = [];
     private restricted = false;
     public get Status(): "ready" | "restricted" { return this.restricted ? "restricted" : "ready"; }
-    public constructor(private readonly scope: GroupScope = "auto", private readonly options: { pets?: boolean; includeSelfWhenSolo?: boolean } = {}) {
-        super([]); this.roster = new GroupMembers(scope);
+    protected constructor(private readonly scope: GroupScope = "auto", private readonly options: { pets?: boolean; includeSelfWhenSolo?: boolean } = {}) {
+        super([]); this.roster = UseSource(GroupMembers, scope);
     }
+    static { registerSource(GroupRoster, props => new GroupRoster(props[0] as GroupScope | undefined, props[1] as { pets?: boolean; includeSelfWhenSolo?: boolean } | undefined)); }
     protected override GetValue(): readonly GroupRosterMember[] {
         this.restricted = this.roster.IsSecret();
         if (this.restricted) return this.snapshot;

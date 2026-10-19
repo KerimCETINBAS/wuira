@@ -39,26 +39,25 @@ import { UI } from "wuira/ui";
 import { Icons } from "wuira/icons";
 import { BlizzardUI, ActionBars } from "wuira/platform";
 import { Nameplates } from "wuira/skins";
-import { SourceConverter, ClassSource } from "wuira/datasources";
+import { SourceConverter, ClassSource, HP, Unit, UseSource, Absorb, Prediction, Mana, SpellSource, KnownSpells } from "wuira/datasources";
 const currentApp: WuiraApp = Wuira.App;
 if (currentApp !== Wuira.App || wuira !== Wuira) throw "Application accessor must remain stable";
 import { PaladinSpells, MageSpells, RacialSpells, GeneralSpells, BindingActions } from "wuira/spells";
 import { WarriorSpells } from "wuira/spells/WarriorSpells";
 const constantHeal = PaladinSpells.HolyLight;
 import { Cell, FlowLayout, ForEach, Window, ProgressBar, SecureButton, Button, FrameMover, KeybindCapture } from "wuira/ui";
-import { HP, Unit } from "wuira/datasources";
-import { SpellSource, KnownSpells } from "wuira/datasources";
-const hp = new HP(Unit.Player);
-const predictedHP = new HP().UseHealPrediction().UseAbsorbPrediction().When(value => value >= 20);
-import { Mana } from "wuira/datasources";
-const manaWithRegen = new Mana(Unit.Player).UseRegenTimer();
+const hp = UseSource(HP, Unit.Player);
+const predictedHP = UseSource(HP).UsePrediction().UseAbsorb().When(value => value >= 20);
+const absorb = UseSource(Absorb, Unit.Player);
+const prediction = UseSource(Prediction, Unit.Player);
+const manaWithRegen = UseSource(Mana, Unit.Player).UseRegenTimer();
 if (manaWithRegen.RegenTimer === undefined) throw "Regen accessory missing";
 if (false) {
-    const transformed = new SourceConverter(hp, value => value * 2);
-    const mapped = new SourceConverter(new ClassSource("player"), value => value?.token);
+    const transformed = UseSource(SourceConverter, hp, value => value * 2);
+    const mapped = UseSource(SourceConverter, UseSource(ClassSource, "player"), value => value?.token);
     const output: number = transformed.Value;
     // @ts-expect-error SourceConverter callback input types follow their source.
-    new SourceConverter(new ClassSource("player"), value => value * 2);
+    UseSource(SourceConverter, UseSource(ClassSource, "player"), value => value * 2);
     mapped.Dispose(); transformed.Dispose();
     const nativeTexture: number = Icons.BlessingOfFreedom_135968;
     const platform: typeof ActionBars = ActionBars;
@@ -84,9 +83,13 @@ if (false) {
     stop();
 }
 const predictedView = <ProgressBar source={predictedHP} healPrediction={{texture:"blizzard"}} absorbPrediction={{color:{r:1,g:1,b:1,a:0.5}}} />;
-if (predictedHP.HealPrediction === undefined || predictedHP.AbsorbPrediction === undefined || predictedView.kind !== "progress") throw "Prediction exports failed";
-// @ts-expect-error HP predicates receive numbers.
-new HP().When(value => value.missing);
+if (predictedHP.Prediction === undefined || predictedHP.Absorb === undefined || predictedHP.HealPrediction !== predictedHP.Prediction || absorb.Value === undefined || prediction.Value === undefined || predictedView.kind !== "progress") throw "Prediction exports failed";
+if (false) {
+    // @ts-expect-error Sources are opened with UseSource.
+    new HP(Unit.Player);
+    // @ts-expect-error HP predicates receive numbers.
+    UseSource(HP).When(value => value.missing);
+}
 const view = <Cell width={160} height={24}><ProgressBar source={hp} /></Cell>;
 const repeated = <FlowLayout width={100} height={24} direction="horizontal">
     <Cell width={1} height={1} />
@@ -117,7 +120,7 @@ if (false) {
     const capture = new KeybindCapture(() => console.log("done"));
     capture.SetActive(false);
     capture.Dispose();
-    const known = new KnownSpells();
+    const known = UseSource(KnownSpells);
     const ids: readonly number[] = known.Value;
     const learned: boolean = known.Has(20271);
     const activeSpells = known.Entries.filter(spell => spell.isPassive === false);
@@ -133,7 +136,7 @@ if (false) {
     known.Dispose();
     // @ts-expect-error Spell snapshots are readonly.
     ids.push(20271);
-    const spell = new SpellSource(20271);
+    const spell = UseSource(SpellSource, 20271);
     const button = <SecureButton action={spell.Action} binding="1" cooldown={spell.Cooldown} finishGlow alpha={() => 0.4} />;
     // @ts-expect-error Key bindings are strings.
     const invalidBinding = <SecureButton binding={1} />;

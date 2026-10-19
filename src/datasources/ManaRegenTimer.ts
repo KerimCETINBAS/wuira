@@ -1,4 +1,5 @@
 import { ProgressSource } from "./ProgressSource";
+import { registerSource } from "./Source";
 import type { ProgressOverrides } from "./ProgressSource";
 
 declare function GetTime(this: void): number;
@@ -30,10 +31,11 @@ export class ManaRegenTimer extends ProgressSource {
     private alphaCurve?: Curve;
     private disposed = false;
 
-    public constructor(private readonly observe: ObserveMana) {
+    protected constructor(private readonly observe: ObserveMana) {
         super({ current: () => this.Remaining(), min: () => 0, max: () => this.total,
             percent: () => this.total > 0 ? this.Remaining() / this.total * 100 : 0 });
     }
+    static { registerSource(ManaRegenTimer, props => new ManaRegenTimer(props[0] as ObserveMana)); }
     public get Phase(): ManaRegenPhase { return this.phase; }
     public get IsActive(): boolean { return this.phase !== "inactive"; }
     private Remaining(): number { return this.IsActive ? Math.max(0, this.start + this.total - GetTime()) : 0; }

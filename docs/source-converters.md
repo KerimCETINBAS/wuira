@@ -3,12 +3,12 @@
 `SourceConverter` transforms a readable source with a typed callback. It consumes change notifications, shares one upstream subscription across observers, and does not create a timer or dispose the shared input. Sources without notifications remain available as checked one-time reads.
 
 ```ts
-import { SourceConverter, HP, ClassSource, Unit } from "wuira/datasources";
+import { UseSource, SourceConverter, HP, ClassSource, Unit } from "wuira/datasources";
 
-const hp = new HP(Unit.Player);
-const doubled = new SourceConverter(hp, value => value * 2);
-const characterClass = new ClassSource(Unit.Player);
-const token = new SourceConverter(characterClass, info => info?.token);
+const hp = UseSource(HP, Unit.Player);
+const doubled = UseSource(SourceConverter, hp, value => value * 2);
+const characterClass = UseSource(ClassSource, Unit.Player);
+const token = UseSource(SourceConverter, characterClass, info => info?.token);
 const stop = doubled.BindTo(value => console.log(value));
 
 // On removal:

@@ -1,4 +1,5 @@
 import { TimerSource } from "./TimerSource";
+import { registerSource } from "./Source";
 import type { NativeDuration } from "./TimerSource";
 import { Unit, UnitSource, resolveUnit } from "./UnitSource";
 import type { UnitInput } from "./UnitSource";
@@ -20,7 +21,7 @@ export class CastTimer extends TimerSource {
         if (issecretvalue(channel)) return channel!;
         return channel ?? "";
     }
-    public constructor(unit: UnitInput = Unit.Player) {
+    protected constructor(unit: UnitInput = Unit.Player) {
         const target = resolveUnit(unit);
         if (UnitCastingDuration === undefined || UnitChannelDuration === undefined) {
             error("CastTimer: native cast/channel durations are unavailable");
@@ -37,4 +38,5 @@ export class CastTimer extends TimerSource {
         ], target.Token);
         this.target = target;
     }
+    static { registerSource(CastTimer, props => new CastTimer(props[0] as UnitInput | undefined)); }
 }

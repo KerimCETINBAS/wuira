@@ -7,6 +7,22 @@ with the release date and highlight breaking changes explicitly.
 
 ## Unreleased
 
+## 0.3.3 — 2026-10-19
+
+### Breaking
+
+- Datasource classes open through `UseSource`. `new HP()`, `new Mana()`, `new SourceConverter()`, and the other datasource constructors are not part of the TypeScript API.
+
+### Added
+
+- `Absorb` reads `UnitGetTotalAbsorbs`. `Prediction` reads `UnitGetIncomingHeals`. Both are standalone sources.
+- `UseSource(HP, unit).UseAbsorb().UsePrediction()` appends those sources for the same unit. `hp.Absorb` and `hp.Prediction` stay empty until requested.
+- `Source` stores the query props and passes them back on each read.
+
+### Changed
+
+- `UseHealPrediction`, `UseAbsorbPrediction`, `HealPrediction`, and `AbsorbPrediction` forward to the new methods and getters.
+
 ## 0.3.2 — 2026-10-19
 
 ### Fixed
