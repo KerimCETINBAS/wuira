@@ -7,6 +7,16 @@ with the release date and highlight breaking changes explicitly.
 
 ## Unreleased
 
+## 0.3.1 — 2026-10-19
+
+### Added
+
+- `width` and `height` accept `"fill"`. Fill children share the space left after fixed siblings. `"inherit"` still takes the whole parent.
+- Flow and grid accept `ltr`, `rtl`, `ttb`, and `btt`, plus `alignX` and `alignY`. A child's anchor places it inside its slot. Older `horizontal`, `vertical`, and `justify` values still apply.
+- Flow `columnGap` and `rowGap` set horizontal and vertical spacing independently. Older `gap` and `lineGap` still apply when the matching axis is unset.
+- `startOverlayGlow` draws Pixel, button overlay, autocast shine, and proc styles with additive textures. It returns a stop function and does not depend on another addon.
+- Static client catalogs for progress textures, backgrounds, borders, and fonts. A catalog key resolves to a Blizzard path; any other string remains a custom path.
+
 ## 0.3.0 — 2026-10-17
 
 ### Breaking

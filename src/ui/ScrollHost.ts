@@ -15,7 +15,10 @@ export class ScrollHost {
         this.Frame = CreateFrame("ScrollFrame", undefined, parent);
         this.Frame.SetSize(parent.GetWidth(), parent.GetHeight());
         this.Frame.SetAllPoints(parent);
-        this.Frame.EnableMouse(true);
+        // A mouse-enabled ScrollFrame keeps clicks from its buttons. Wheel-only input still scrolls.
+        this.Frame.EnableMouse(false);
+        const wheel = this.Frame as NativeScrollFrame & { EnableMouseWheel?(enabled: boolean): void };
+        wheel.EnableMouseWheel?.(true);
         this.Frame.SetScript("OnMouseWheel", (_frame, delta) => this.ScrollBy(-delta * 32));
         this.Frame.Show();
     }

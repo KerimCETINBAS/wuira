@@ -3,7 +3,7 @@ import type { IFlowLayout } from "../FlowLayout";
 import type { IGridLayout } from "../GridLayout";
 import type { Element } from "../primitives/jsx";
 import { resolveSpacing, Insets } from "../../types/Spacing";
-import { calculateFlow } from "./calculateFlow";
+import { calculateFlow, flowSpacing } from "./calculateFlow";
 import { calculateGrid } from "./calculateGrid";
 
 export interface MeasuredCell {
@@ -16,12 +16,57 @@ export interface MeasuredCell {
 }
 
 function resolveSize(value: Size, available: number | undefined, margin: number): number {
-    if (value === "inherit") {
-        if (available === undefined) error("Cannot inherit a size from an unconstrained content-sized parent");
+    if (value === "inherit" || value === "fill") {
+        if (available === undefined) {
+            if (value === "fill") return 0;
+            error("Cannot inherit a size from an unconstrained content-sized parent");
+        }
         return Math.max(0, available - margin);
     }
     if (!Number.isFinite(value) || value < 0) error("Cell sizes must be finite and non-negative");
     return value;
+}
+
+function flowMainHorizontal(direction: string | undefined): boolean {
+    return direction === "horizontal" || direction === "ltr" || direction === "rtl" || direction === "horizontalReverse";
+}
+
+/** Fill children share the main-axis space left after fixed siblings and gaps. */
+function measureChildren(
+    layout: IFlowLayout | IGridLayout | undefined,
+    sourceChildren: Element[],
+    contentWidth: number | undefined,
+    contentHeight: number | undefined,
+    path: Element[],
+): MeasuredCell[] {
+    const box = { width: contentWidth, height: contentHeight };
+    if (layout === undefined || layout.kind !== "flow") return sourceChildren.map(child => measureLayout(child, box, path));
+    const horizontal = flowMainHorizontal(layout.props.direction);
+    const gap = flowSpacing(layout.props.direction, layout.props).main;
+    const measured: MeasuredCell[] = [];
+    const fillIndexes: number[] = [];
+    for (let index = 0; index < sourceChildren.length; index += 1) {
+        const child = sourceChildren[index] as ICell;
+        if ((horizontal ? child.props.width : child.props.height) === "fill") fillIndexes.push(index);
+        else measured[index] = measureLayout(child, box, path);
+    }
+    let used = 0;
+    for (let index = 0; index < measured.length; index += 1) {
+        const child = measured[index];
+        if (child === undefined) continue;
+        used += horizontal
+            ? child.width + child.margin.left + child.margin.right
+            : child.height + child.margin.top + child.margin.bottom;
+    }
+    const contentMain = horizontal ? contentWidth : contentHeight;
+    const leftover = contentMain === undefined ? 0 : Math.max(0, contentMain - used - Math.max(0, sourceChildren.length - 1) * gap);
+    const share = fillIndexes.length === 0 ? 0 : leftover / fillIndexes.length;
+    for (const index of fillIndexes) {
+        measured[index] = measureLayout(sourceChildren[index], horizontal
+            ? { width: share, height: contentHeight }
+            : { width: contentWidth, height: share }, path);
+    }
+    return measured;
 }
 
 /** Resolve available space top-down and content bounds bottom-up. */
@@ -58,16 +103,17 @@ export function measureLayout(
             (contentHeight - (grid.rowGap ?? grid.gap ?? 0) * (rows - 1)) / rows));
     }
     const path = [...ancestors, element];
-    const children = sourceChildren.map(child => measureLayout(child, { width: childWidth, height: childHeight }, path));
+    const children = measureChildren(layout, sourceChildren, childWidth, childHeight, path);
     let placements: MeasuredCell["placements"];
     if (layout !== undefined) {
         const sizes = children.map(child => ({
             width: child.width + child.margin.left + child.margin.right,
             height: child.height + child.margin.top + child.margin.bottom,
+            anchor: child.cell.props.anchor,
         }));
         const positions = layout.kind === "flow"
             ? calculateFlow({ ...layout.props, width: contentWidth ?? 0, height: contentHeight ?? 0 }, sizes)
-            : calculateGrid(layout.props, sizes);
+            : calculateGrid({ ...layout.props, width: contentWidth ?? 0, height: contentHeight ?? 0 }, sizes);
         placements = positions.map(point => ({ x: point.x + padding.left, y: point.y + padding.top }));
         if (contentSizing) {
             width = padding.left + padding.right;

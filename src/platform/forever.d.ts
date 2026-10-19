@@ -7,6 +7,7 @@ interface wuiraNativeTexture {
     SetAllPoints(frame: wuiraNativeFrame): void;
     SetColorTexture(red: number, green: number, blue: number, alpha: number): void;
     SetTexture(path: string | number | undefined): void;
+    SetAtlas(atlas: string): void;
     SetVertexColor(red: number, green: number, blue: number, alpha: number): void;
     SetBlendMode(mode: import("../types/Texture").BlendMode): void;
     SetHorizTile(enabled: boolean): void;
@@ -101,7 +102,7 @@ interface wuiraNativeStatusBar extends wuiraNativeFrame {
     GetStatusBarTexture(): wuiraNativeTexture;
     SetMinMaxValues(min: number, max: number): void;
     SetValue(value: number): void;
-    SetStatusBarTexture(path: string): void;
+    SetStatusBarTexture(path: string | number): void;
     SetStatusBarColor(red: number, green: number, blue: number, alpha: number): void;
     SetOrientation(orientation: "HORIZONTAL" | "VERTICAL"): void;
     SetReverseFill(reverse: boolean): void;

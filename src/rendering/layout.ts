@@ -10,8 +10,8 @@ import type { RenderedCell } from "./types";
 export function prepareLayout(element: Element, parent: wuiraNativeFrame, mountedFrames: ReadonlyMap<CellProps, wuiraNativeFrame>) {
     const rootProps = (element as ICell).props;
     const measured = measureLayout(element, {
-        width: rootProps.width === "inherit" ? parent.GetWidth() : undefined,
-        height: rootProps.height === "inherit" ? parent.GetHeight() : undefined,
+        width: rootProps.width === "inherit" || rootProps.width === "fill" ? parent.GetWidth() : undefined,
+        height: rootProps.height === "inherit" || rootProps.height === "fill" ? parent.GetHeight() : undefined,
     });
     // UIParent itself can be protected without restricting ordinary addon widgets.
     let protectedTree = parent !== UIParent && (parent.IsProtected?.() ?? false);

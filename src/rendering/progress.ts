@@ -1,14 +1,14 @@
 import type { IProgressBar } from "../ui/ProgressBar";
 import type { TextureOptions } from "../types/Texture";
 import { HP } from "../datasources/Resources";
-import { resolveStatusBarTexture } from "../ui/decorations/statusBarTextures";
+import { applyStatusBarTexture, resolveStatusBarTexture } from "../ui/decorations/statusBarTextures";
 import type { MountedTree, RenderedCell } from "./types";
 
 export function renderProgress(item: RenderedCell, tree: MountedTree, onActiveChange: (active: boolean) => void): void {
     const props = (item.cell as IProgressBar).props;
     const bar = item.frame as wuiraNativeStatusBar;
     const color = props.foreground?.color ?? props.color;
-    bar.SetStatusBarTexture(resolveStatusBarTexture(props.foreground?.texture ?? props.texture ?? "solid"));
+    applyStatusBarTexture(bar, resolveStatusBarTexture(props.foreground?.texture ?? props.texture ?? "solid"));
     bar.SetStatusBarColor(color?.r ?? 1, color?.g ?? 1, color?.b ?? 1, color?.a ?? 1);
     if (props.foreground !== undefined) {
         const fill = bar.GetStatusBarTexture();
@@ -33,7 +33,7 @@ export function renderProgress(item: RenderedCell, tree: MountedTree, onActiveCh
                 layer.EnableMouse(false);
                 layer.SetFrameLevel(bar.GetFrameLevel());
                 layer.SetSize(item.width, item.height);
-                layer.SetStatusBarTexture(resolveStatusBarTexture(style.texture ?? "solid"));
+                applyStatusBarTexture(layer, resolveStatusBarTexture(style.texture ?? "solid"));
                 const tint = style.color!;
                 layer.SetStatusBarColor(tint.r, tint.g, tint.b, tint.a ?? 0.5);
                 const texture = layer.GetStatusBarTexture();

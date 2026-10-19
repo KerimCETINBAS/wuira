@@ -6,6 +6,7 @@ import type { IconProps } from "../ui/Icon";
 import { createSecureButton } from "../platform/SecureButton";
 import { renderSecureButton } from "./secureButton";
 import { renderProgress } from "./progress";
+import { resolveMediaPath, clientFonts } from "../ui/media/clientMedia";
 import type { MountedTree, RenderedCell } from "./types";
 
 export function createWidget(cell: ICell, parent: wuiraNativeFrame): wuiraNativeFrame {
@@ -30,7 +31,7 @@ export function renderWidget(item: RenderedCell, tree: MountedTree, updates: (()
         const props = item.cell.props as LabelProps;
         const label = item.frame.CreateFontString(undefined, "OVERLAY");
         label.SetAllPoints(item.frame);
-        label.SetFont(props.font ?? "Fonts\\FRIZQT__.TTF", props.fontSize ?? 12, "OUTLINE");
+        label.SetFont(resolveMediaPath(clientFonts, props.font ?? "friz"), props.fontSize ?? 12, "OUTLINE");
         label.SetJustifyH(props.align ?? "LEFT");
         label.SetJustifyV("MIDDLE");
         const color = props.color;

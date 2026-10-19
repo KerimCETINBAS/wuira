@@ -4,7 +4,7 @@ import type { Decorations } from "./decorations/Decorations";
 import type { Position } from "../types/Position";
 import type { Spacing } from "../types/Spacing";
 
-export type Size = number | "inherit";
+export type Size = number | "inherit" | "fill";
 
 /** Common visual descriptor accepted by the mounting API. */
 export interface Cell extends Element {}
