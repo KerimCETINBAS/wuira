@@ -49,7 +49,8 @@ export function calculateFlow(props: FlowLayoutProps & { width: number; height: 
     const spacing = flowSpacing(props.direction, props);
     const gap = spacing.main;
     const lineGap = spacing.cross;
-    const mainJustify = (horizontal && props.alignX === undefined) || (!horizontal && props.alignY === undefined) ? props.justify : undefined;
+    const justifyFallback = (horizontal && props.alignX === undefined) || (!horizontal && props.alignY === undefined);
+    const mainJustify = justifyFallback ? props.justify : undefined;
     const alignX = fraction(props.alignX ?? (horizontal && mainJustify === "center" ? "center" : horizontal && mainJustify === "end" ? "right" : undefined), "center", "right");
     const alignY = fraction(props.alignY ?? (!horizontal && mainJustify === "center" ? "center" : !horizontal && mainJustify === "end" ? "bottom" : undefined), "center", "bottom");
     interface Item { index: number; main: number; mainSize: number; crossSize: number; width: number; height: number; anchor?: string }
@@ -90,7 +91,8 @@ export function calculateFlow(props: FlowLayoutProps & { width: number; height: 
     let cross = (crossBox - packCross) * crossFraction;
     for (let index = 0; index < lines.length; index += 1) {
         const packed = lines[index];
-        const mainShift = (mainBox - packed.mainSize) * mainFraction;
+        const mainFree = mainBox - packed.mainSize;
+        const mainShift = (justifyFallback ? Math.max(0, mainFree) : mainFree) * mainFraction;
         for (const item of packed.items) {
             const main = (reverse ? packed.mainSize - item.main - item.mainSize : item.main) + mainShift;
             const slotX = horizontal ? main : cross;

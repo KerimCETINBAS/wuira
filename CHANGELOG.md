@@ -7,6 +7,12 @@ with the release date and highlight breaking changes explicitly.
 
 ## Unreleased
 
+## 0.3.2 — 2026-10-19
+
+### Fixed
+
+- Older `justify` uses only leftover space. A line wider than its container stays at the start instead of being pulled backward.
+
 ## 0.3.1 — 2026-10-19
 
 ### Added
